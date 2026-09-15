@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>New Dashboard</title>
+<script>
+  /* No-FOUC theme bootstrap. Runs before the body paints so a saved dark
+     preference doesn't flash light first. Reads the persisted choice and, if
+     dark, sets data-theme + color-scheme on <html> immediately.
+     Merged from both source dashboards' versions (verbatim logic, not
+     byte-identical — see the "Settings menu & dark-mode toggle" note in
+     design-tokens.css for why). DEFAULT IS LIGHT. To instead follow the
+     device on first visit (no saved choice), set FOLLOW_SYSTEM_DEFAULT below.
+     THEME_KEY is a per-dashboard localStorage key — rename it for each new
+     build (e.g. "product-pulse-theme") so themes don't leak across dashboards
+     that share an origin. */
+  (function () {
+    var THEME_KEY = 'dashboard-theme';
+    var FOLLOW_SYSTEM_DEFAULT = false;
+    try {
+      var saved = localStorage.getItem(THEME_KEY); // 'light' | 'dark' | null
+      var dark = saved === 'dark' ||
+        (saved === null && FOLLOW_SYSTEM_DEFAULT &&
+         window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (dark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.style.colorScheme = 'dark';
+      }
+    } catch (e) { /* localStorage blocked (some webviews) — default light */ }
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   DESIGN TOKENS — Product Pulse / Commercial Pulse shared system
+   ==========================================================================
+   PROVENANCE: every rule below the line marked "END VERBATIM SOURCE" is
+   copied byte-for-byte from the two source dashboards
+   (20260728_1825_Product_Pulse.html and 20260729_1225_Commercial_Pulse.html),
+   confirmed identical between both files via SHA-256 hash comparison before
+   inclusion — not retyped, not paraphrased. Where the two files diverged,
+   that's called out explicitly rather than silently picking one.
+
+   REFRESH (Aug 2026): re-diffed against two later dashboard exports —
+   202607_Product_Pulse.html and Commercial_Pulse_-_July_2026.html — to pull
+   in shell changes both dashboards had independently picked up since the
+   original baseline. Confirmed line-for-line identical between the two new
+   files before inclusion: the brand-mark topbar title (with scroll
+   cross-fade), the collapsible/mobile sidenav, the mobile-first responsive
+   layer, and an `.export-wrap` base rule that was missing before. One piece
+   — the settings menu / dark-mode toggle — was NOT identical between the two
+   new files; that divergence is called out where it's addressed below rather
+   than silently picking one dashboard's version. Everything else that
+   differed between the two new files (chart modal, driver tables, the
+   pyramid/brand grids, summary/definition tables, threshold chips, the
+   upload/dropzone flow, etc.) is page-specific per-report work, not shared
+   system — left out of this file on purpose, same as before.
+
+   Link this file, then add the two Google Fonts <link> tags to <head>:
+
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+   <link rel="stylesheet" href="design-tokens.css">
+   ========================================================================== */
+
+/* ---- Color & font tokens (verbatim, verified identical in both files) ---- */
+:root {
+    /* Tell the browser this site is light-only. Paired with the matching
+       <meta name="color-scheme"> in <head>; the CSS property is the modern
+       spec, the meta is read earlier and prevents a flash of incorrect
+       rendering during load. */
+    color-scheme: light;
+    /* Core palette. navy is the dominant text/heading colour and the
+       topbar/settings-menu background; navy-2 is one step lighter, used for
+       hover states on navy-backed buttons; navy-ink is a step darker still,
+       reserved for text that needs to read as "navy but heavier" (e.g. active
+       nav item labels) without introducing a fourth unrelated colour. */
+    --navy: #0F1F4A; --navy-2: #1A2B5C; --navy-ink: #0A1738;
+    /* cyan is the one "live/interactive" accent — focus rings, links, the
+       active tab underline, primary buttons. pink is reserved for
+       attention-grabbing UI chrome (kicker labels, the sidenav active-item
+       bar) rather than data — keeping it out of charts means it stays
+       meaningful as a "look here" signal. pink-soft is its pale tint, for
+       backgrounds behind pink text/icons. */
+    --cyan: #15B5DB; --pink: #EE3A7C; --pink-soft: #FBE4ED;
+    /* Text colour ramp, darkest to lightest: ink for primary body text,
+       ink-2 for secondary/supporting text, ink-3 for tertiary text (captions,
+       placeholder-style hints, disabled states). Pick by how much attention
+       the text should draw, not by literal darkness. */
+    --ink: #1A2238; --ink-2: #4A5170; --ink-3: #7B829B;
+    /* Hairline colours: line for the default border/divider weight, line-2
+       for a slightly more visible border (e.g. an input's resting border,
+       where line alone would be too faint to read as interactive). */
+    --line: #E5E7ED; --line-2: #CBD0DC;
+    /* Surface ramp: bg is the page background, bg-2 a step darker for cards/
+       hover states sitting on top of bg, bg-3 darker still for the most
+       recessed surfaces (e.g. an inset well inside a card). */
+    --bg: #FFFFFF; --bg-2: #F7F8FB; --bg-3: #EEF0F5;
+    /* --surface backs every page-level surface that was previously a hard-coded
+       white literal (html/body, topbar, modal, sticky cells, drawer). Keeping it
+       a variable lets dark mode retheme those surfaces while the !important on
+       each rule still defeats heuristic webview darkening for default-light
+       users (which is the common case the literals were guarding against). */
+    --surface: #FFFFFF;
+    /* Chart "chrome" colours (axis text / gridlines / borders / legend) and the
+       missing-data bar fill. Mirrored in JS by the CT theme object; kept here as
+       documentation of the light values. */
+    --pos-bg: #C6E6B5; --pos-fg: #1A5A1A; --neg-bg: #FAD2DC; --neg-fg: #8B1F3F;
+    /* CORRECTED Aug 2026: sbg/pp/bfu/tom below were slightly-off approximations
+       in both source dashboards (verified by diffing against the brand-supplied
+       hex codes hardcoded in UK_Brand_Pulse's BRANDS object, which cites them as
+       "brand-supplied hex codes" in its own comment — that file is the ground
+       truth here, not Product/Commercial Pulse). Corrected: pp #004F1F→#004833,
+       sbg #0F1F4A→#00277C (was silently reusing --navy's value, not a real brand
+       hex), bfu #FFB81C→#FFB80C (single-digit typo). bfe and tomg have no
+       equivalent brand entry in UK_Brand_Pulse to check against (it doesn't
+       split Betfair into a separate "Exchange" swatch, and #007E87 doesn't match
+       any tombola variant there either — Bingo tombola is #00B2AC, Casino's
+       "Tombola Arcade" is #C94EFF) — left as-is, flagged for manual confirmation
+       against Flutter's brand guidelines rather than guessed at. The -soft tints
+       and -ink foreground were NOT recalculated from the corrected base — they
+       were hand-picked pairings in the original source, so a designer should
+       eyeball sbg-soft/pp-soft/bfu-soft against their new base colour before
+       shipping a dashboard that leans on them heavily. */
+    --sbg: #00277C; --sbg-soft: #D6DCEA;
+    --pp:  #004833; --pp-soft: #D2E3D7;
+    --bfu: #FFB80C; --bfu-soft: #FFF1CC; --bfu-ink: #6B4900;
+    --bfe: #F39200; --bfe-soft: #FCE3C2; /* unverified — see note above */
+    --tom: #00B2AC; --tom-soft: #C8EEF1;
+    --tomg: #007E87; --tomg-soft: #BFE6E9; /* unverified — see note above */
+    --core: #475569; --core-soft: #E2E8F0;
+    --prod-sports: #1E88E5; --prod-gaming: #9CA3AF; --prod-exchange: #1F1F1F;
+    /* Two-font system: Poppins (geometric, a bit of personality) for anything
+       that reads as a heading, label, or UI chrome element — titles, nav
+       items, buttons, badges. Inter (neutral, built for density) for
+       anything that's primarily read as data or body prose — table cells,
+       paragraph text, tooltips. When in doubt: if it's naming something,
+       Poppins; if it's the content itself, Inter. */
+    --font-display: 'Poppins', sans-serif;
+    --font-body: 'Inter', -apple-system, sans-serif;
+    /* Topbar is position:sticky at top:0. Sticky headers below it (e.g. the
+       brand grid's brand-row) anchor at this offset so they tuck cleanly
+       beneath the topbar as you scroll. Measured value with the current
+       topbar padding + content + border. If the topbar ever changes height,
+       update this one value. */
+    --topbar-h: 56px;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    /* --navy is used in two ways: as title/headline TEXT (the dominant use,
+       ~25 sites) and as a few header/toast BACKGROUNDS with white text. We map
+       it to a light periwinkle so the many text uses read on dark; the handful
+       of background uses are overridden separately below. */
+    --navy: #9FB0E0; --navy-2: #8294C8; --navy-ink: #C7D2F0;
+    --cyan: #2CC6EA; --pink: #F86CA0; --pink-soft: #3A1F2B;
+    --ink: #E7E9F0; --ink-2: #B3BACB; --ink-3: #858CA0;
+    --line: #2A2F3C; --line-2: #3B4252;
+    --bg: #14171F; --bg-2: #1B1F2A; --bg-3: #232836;
+    --surface: #14171F;
+    /* Status pills: muted dark fills with light foregrounds. */
+    --pos-bg: #1E3A1E; --pos-fg: #8FD98F; --neg-bg: #3E1F2A; --neg-fg: #F2899F;
+    /* Brand BASE colours are deliberately left at their light-mode values: they
+       back the brand badges (saturated chip + white text), which read fine on a
+       dark page. Only the brand "soft" tints (used as light panel backgrounds
+       with dark text in light mode) are re-tuned to dark tints here, and the
+       brand "ink" foregrounds are lifted. Chart line/series brand colours are
+       handled separately in JS (BRAND_COLOR) because Chart.js needs literals. */
+    --sbg-soft: #232A3D;
+    --pp-soft: #16271B;
+    --bfu-soft: #33290D; --bfu-ink: #FFE3A0;
+    --bfe-soft: #33240F;
+    --tom-soft: #103035;
+    --tomg-soft: #0F2A2D;
+    --core-soft: #262C37;
+    /* Product accent dots/swatches — lifted so the near-black exchange colour
+       and the mid greys remain visible on a dark surface. */
+    --prod-sports: #4FA3EE; --prod-gaming: #B6BCC7; --prod-exchange: #D8D8D8;
+  }
+
+/* ---- Reset & base document (verbatim, verified identical) ---- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Hard-coded white literals + !important to defeat browser/extension dark-mode
+   inversions that ignore color-scheme. Some Android browsers and dark-mode
+   extensions force-override CSS variables and the color-scheme hint; using
+   literal #ffffff on the page-level surfaces makes this much harder to break. */
+html, body { background: var(--surface) !important; color: var(--ink); font-family: var(--font-body); font-weight: 400; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+.container { max-width: 1440px; margin: 0 auto; padding: 0 32px; transition: padding 0.22s ease; background: var(--surface); }
+/* Compensates for the sidebar collapsing to 0 width (see "Collapsible
+   sidenav" below) so content doesn't visibly re-center on collapse. Source
+   dashboards scope this to an #dashboard wrapper (they toggle between an
+   upload screen and the dashboard proper, each with their own .container);
+   this boilerplate has one .container, so the selector is simplified
+   accordingly — same effect, less markup. */
+body.sidebar-collapsed .container { padding-left: 44px; }
+
+.topbar { background: var(--surface) !important; border-bottom: 1px solid var(--line); padding: 14px 0; position: sticky; top: 0; z-index: 100; }
+/* iOS safe-area handling — pads for the notch / Dynamic Island. env()
+   returns 0 on browsers without notches, so this is safe everywhere. */
+.topbar { padding-top: calc(14px + env(safe-area-inset-top, 0px)); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* ---- Brand mark: topbar title, with a scroll cross-fade (verbatim,
+   verified identical in both updated source files). Uses a 1x1 grid so both
+   layers occupy the same cell — the default title/date fades out and the
+   active page's title fades in once its .page-title scrolls behind the
+   sticky topbar. Wire it up with a scroll listener that toggles the
+   `.scrolled` class once the active section's .page-title passes behind the
+   topbar (see the example script at the bottom of boilerplate.html). ---- */
+.brand-mark { display: grid; grid-template-columns: 1fr; min-width: 0; flex: 1 1 auto; }
+.brand-mark > * { grid-column: 1; grid-row: 1; }
+.brand-mark-layer { display: flex; align-items: baseline; gap: 12px; min-width: 0; transition: opacity 150ms ease; }
+.brand-mark-layer.brand-mark-compact { opacity: 0; pointer-events: none; }
+.brand-mark.scrolled .brand-mark-default { opacity: 0; pointer-events: none; }
+.brand-mark.scrolled .brand-mark-compact { opacity: 1; pointer-events: auto; }
+.brand-mark .title { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--navy); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-mark .title .page-title-subtle { font-weight: 500; color: var(--ink-3); }
+.brand-mark[role="link"] { cursor: pointer; border-radius: 3px; }
+.brand-mark[role="link"]:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.brand-mark .sub { font-family: var(--font-display); font-weight: 400; font-size: 14px; color: var(--cyan); white-space: nowrap; flex-shrink: 0; }
+
+/* ---- Icon buttons (verbatim; source uses .reload-btn / .export-btn as the
+   class names, reused identically for every 36x36 icon-only button —
+   including Commercial Pulse's dedicated .settings-btn, which repeats the
+   same declarations). Included here under both original names plus a
+   generic .icon-btn alias for new markup. ---- */
+.reload-btn, .export-btn, .icon-btn { width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line-2); background: var(--bg); cursor: pointer; border-radius: 6px; color: var(--ink-2); flex-shrink: 0; transition: background 0.12s, border-color 0.12s, color 0.12s; }
+.reload-btn:hover, .export-btn:hover, .icon-btn:hover { background: var(--bg-2); border-color: var(--ink-3); color: var(--navy); }
+.reload-btn:focus-visible, .export-btn:focus-visible, .icon-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.reload-btn svg, .export-btn svg, .icon-btn svg { width: 16px; height: 16px; }
+
+/* ---- Dropdown menu (export/settings menu shell — verbatim) ---- */
+.export-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+.export-menu { position: absolute; top: calc(100% + 6px); right: 0; min-width: 280px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 32px rgba(15,31,74,0.16); padding: 6px; z-index: 1500; display: none; }
+.export-wrap.open .export-menu { display: block; }
+.export-menu-item { display: block; width: 100%; text-align: left; background: none; border: none; border-radius: 6px; padding: 9px 12px; cursor: pointer; }
+.export-menu-item:hover { background: var(--bg-2); }
+.export-menu-item:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.export-item-title { display: block; font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--ink); }
+.export-item-sub { display: block; font-family: var(--font-body); font-size: 11px; color: var(--ink-3); margin-top: 2px; line-height: 1.35; }
+
+/* ---- Settings menu & dark-mode toggle. NOT byte-identical between the two
+   updated source files — both independently built a gear-icon-opens-popover
+   pattern for Appearance (light/dark) plus dashboard-specific settings rows,
+   but named the pieces differently and made different secondary choices.
+   Rather than pick one silently, this is a merged version:
+
+   - Structure/naming (.settings-btn, .settings-wrap.open, .settings-row,
+     the label+description row variant, the divider between stacked rows)
+     comes from Commercial Pulse — it's the more complete of the two: it
+     styles the trigger button itself while open, and supports rows with a
+     description line under the label.
+   - The on/off switch is Commercial Pulse's checkbox-based .toggle-switch
+     (real <input type="checkbox"> under the hood — screen-reader friendly
+     by default). Product Pulse's alternative, a plain button with
+     role="switch" and no hidden form element, is kept below as .set-switch
+     in case you'd rather not introduce a checkbox into the markup. Pick one
+     convention and use it consistently within a given dashboard. ---- */
+.settings-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+.settings-btn { width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--surface); cursor: pointer; color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; padding: 0; flex-shrink: 0; transition: background 0.12s, color 0.12s, border-color 0.12s; }
+.settings-btn:hover { background: var(--bg-2); color: var(--navy); border-color: var(--ink-3); }
+.settings-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.settings-btn svg { width: 18px; height: 18px; }
+.settings-wrap.open .settings-btn { background: var(--bg-2); color: var(--navy); border-color: var(--ink-3); }
+.settings-menu { position: absolute; top: calc(100% + 6px); right: 0; min-width: 300px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 32px rgba(15,31,74,0.16); padding: 14px 16px; z-index: 1500; display: none; }
+.settings-wrap.open .settings-menu { display: block; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0; }
+.settings-row + .settings-row { border-top: 1px solid var(--line-2); }
+.settings-row-label { font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--ink); }
+.settings-row .segmented { height: 30px; }
+.settings-row .segmented button svg { width: 14px; height: 14px; vertical-align: -2px; margin-right: 4px; }
+.settings-row-text { display: flex; flex-direction: column; gap: 2px; max-width: 220px; }
+.settings-row-desc { font-family: var(--font-body); font-size: 11px; color: var(--ink-3); line-height: 1.4; }
+.toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-switch .toggle-track { position: absolute; inset: 0; background: var(--bg-2); border: 1px solid var(--line); border-radius: 22px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.toggle-switch .toggle-track::before { content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; background: var(--surface); border-radius: 50%; box-shadow: 0 1px 2px rgba(15,31,74,0.2); transition: transform 0.15s; }
+.toggle-switch input:checked + .toggle-track { background: var(--navy); border-color: var(--navy); }
+.toggle-switch input:checked + .toggle-track::before { transform: translateX(18px); }
+.toggle-switch input:focus-visible + .toggle-track { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* Alternative on/off switch (Product Pulse) — see note above. */
+.set-switch { position: relative; width: 38px; height: 22px; border-radius: 999px; border: 0; background: var(--bg-3); cursor: pointer; flex-shrink: 0; transition: background 0.15s; padding: 0; }
+.set-switch.on { background: var(--cyan); }
+.set-switch .set-switch-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 0.15s; }
+.set-switch.on .set-switch-knob { transform: translateX(16px); }
+.set-switch:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* ---- Segmented control (verbatim, verified identical in both files) ---- */
+.segmented { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 2px; height: 32px; box-sizing: border-box; align-items: stretch; }
+.segmented button { background: transparent; border: none; padding: 0 14px; font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--ink-3); cursor: pointer; border-radius: 4px; transition: background 0.15s, color 0.15s, box-shadow 0.15s; white-space: nowrap; line-height: 1; }
+.segmented button:hover:not(.active) { color: var(--ink); }
+.segmented button.active { background: var(--bg); color: var(--navy); font-weight: 600; box-shadow: 0 1px 2px rgba(15,31,74,0.08), 0 0 0 0.5px rgba(15,31,74,0.04); }
+.segmented button[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+.segmented button[aria-disabled="true"]:hover { color: var(--ink-3); }
+.segmented button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+
+/* ---- Toggle switch (verbatim — Product Pulse only; Commercial Pulse uses
+   .segmented for the same job instead of this component. Include it only
+   if your new build wants a true binary on/off switch rather than a
+   labeled two-option control.) ---- */
+.set-switch { position: relative; width: 38px; height: 22px; border-radius: 999px; border: 0; background: var(--bg-3); cursor: pointer; flex-shrink: 0; transition: background 0.15s; padding: 0; }
+.set-switch.on { background: var(--cyan); }
+.set-switch .set-switch-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25); transition: transform 0.15s; }
+.set-switch.on .set-switch-knob { transform: translateX(16px); }
+.set-switch:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* ---- Toast notifications (verbatim, verified identical) ---- */
+.toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--navy); color: #FFFFFF; padding: 12px 22px; border-radius: 6px; font-family: var(--font-body); font-size: 13px; font-weight: 500; z-index: 2000; box-shadow: 0 10px 30px rgba(15, 31, 74, 0.25); max-width: 560px; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
+.toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.info { background: var(--navy); }
+.toast.error { background: #B53528; }
+.toast.success { background: #1A6B3F; }
+:root[data-theme="dark"] .toast { background: var(--bg-3); color: var(--ink); }
+
+/* ---- File dropzone (verbatim, verified identical) ---- */
+.dropzone { border: 2px dashed var(--line-2); padding: 56px 32px; border-radius: 6px; cursor: pointer; transition: all 0.15s; background: var(--bg-2); max-width: 600px; margin: 0 auto; display: block; }
+.dropzone:hover, .dropzone.dragover { border-color: var(--cyan); background: #F5FCFE; }
+.dropzone-label { font-family: var(--font-display); font-weight: 500; font-size: 15px; color: var(--ink); margin-bottom: 6px; }
+.dropzone-hint { font-size: 12px; color: var(--ink-3); }
+:root[data-theme="dark"] .dropzone:hover,
+:root[data-theme="dark"] .dropzone.dragover { background: var(--bg-2) !important; }
+
+/* ---- Brand badges (verbatim, verified identical) ---- */
+.brand-badge { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-family: var(--font-display); font-weight: 700; font-size: 14px; padding: 6px 12px; border-radius: 4px; white-space: nowrap; min-width: 96px; box-sizing: border-box; }
+.brand-badge.sm { font-size: 11px; font-weight: 600; padding: 4px 10px; letter-spacing: 0.01em; min-width: 56px; min-height: 36px; line-height: 1.2; text-align: center; white-space: normal; }
+/* sbg = Sky Bet, pp = Paddy Power, bfu = Betfair, bfe = Betfair Exchange
+   (unverified, see token comment above), tom = tombola, tomg = tombola
+   Games/Arcade variant (unverified, see token comment above), core = generic/
+   non-Flutter comparator brand, not a real brand hex. */
+.brand-badge.sbg { background: var(--sbg); color: #FFFFFF; }
+.brand-badge.pp  { background: var(--pp); color: #FFFFFF; }
+.brand-badge.bfu { background: var(--bfu); color: var(--bfu-ink); }
+.brand-badge.bfe { background: var(--bfe); color: #FFFFFF; }
+.brand-badge.tom { background: var(--tom); color: #FFFFFF; }
+.brand-badge.tomg { background: var(--tomg); color: #FFFFFF; }
+.brand-badge.core { background: var(--core); color: #FFFFFF; }
+
+/* ---- Sidenav (verbatim, verified identical) ---- */
+.sidenav { border-right: 1px solid var(--line); padding-right: 16px; position: sticky; top: 60px; align-self: start; max-height: calc(100vh - 76px); overflow-y: auto; transition: opacity 0.18s ease; }
+.sidenav h3 { font-family: var(--font-body); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-3); margin: 16px 0 6px; }
+.sidenav h3:first-child { margin-top: 0; }
+.sidenav button[data-section] { display: block; width: 100%; text-align: left; background: none; border: none; padding: 7px 10px; font-family: var(--font-body); font-size: 13px; color: var(--ink-2); cursor: pointer; border-radius: 4px; border-left: 2px solid transparent; }
+.sidenav button[data-section]:hover { background: var(--bg-2); color: var(--ink); }
+.sidenav button[data-section].active { background: var(--bg-2); color: var(--navy); font-weight: 600; border-left-color: var(--pink); }
+
+/* ---- Collapsible sidenav: desktop slim-rail collapse + mobile off-canvas
+   drawer (verbatim, verified identical in both updated source files). The
+   .layout/.sidenav rules above stay as the resting state; these add the
+   collapsed and drawer states on top. ---- */
+.layout > main { min-width: 0; }
+.layout.sidebar-collapsed { grid-template-columns: 0 1fr; gap: 0; }
+.layout.sidebar-collapsed .sidenav { opacity: 0; pointer-events: none; overflow: hidden; }
+/* Hamburger icon button — used for both collapse (top-right of sidebar) and
+   expand (top-left of viewport). Same look in both spots for consistency. */
+.sidenav-toggle, .sidenav-expand { width: 28px; height: 28px; border-radius: 4px; border: 1px solid transparent; background: transparent; cursor: pointer; color: var(--ink-3); display: flex; align-items: center; justify-content: center; padding: 0; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.sidenav-toggle:hover, .sidenav-expand:hover { background: var(--bg-2); color: var(--navy); border-color: var(--line); }
+.sidenav-toggle:focus-visible, .sidenav-expand:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.sidenav-toggle svg, .sidenav-expand svg { display: block; width: 16px; height: 16px; }
+.sidenav-toggle { position: absolute; top: 0; right: 8px; }
+.layout.sidebar-collapsed .sidenav-toggle { display: none; }
+/* Expand button — top-left of viewport when the sidebar is collapsed.
+   Positioned below the sticky topbar and z-indexed above it. */
+.sidenav-expand { position: fixed; top: 68px; left: 8px; display: none; z-index: 110; background: var(--bg); border-color: var(--line); box-shadow: 0 2px 6px rgba(15,31,74,0.05); }
+body.sidebar-collapsed .sidenav-expand { display: flex; }
+
+/* Mobile hamburger button + drawer backdrop (verbatim, verified identical).
+   Hidden on desktop; the responsive layer below reveals them on small
+   screens and turns the sidenav into an off-canvas drawer. */
+.mobile-nav-toggle { display: none; width: 36px; height: 36px; border-radius: 6px; border: 1px solid transparent; background: transparent; cursor: pointer; color: var(--ink-2); align-items: center; justify-content: center; padding: 0; flex-shrink: 0; }
+.mobile-nav-toggle:hover { background: var(--bg-2); color: var(--navy); }
+.mobile-nav-toggle:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.mobile-nav-toggle svg { width: 20px; height: 20px; }
+.mobile-nav-backdrop { display: none; position: fixed; inset: 0; background: rgba(15, 31, 74, 0.45); z-index: 999; opacity: 0; transition: opacity 0.18s ease; }
+body.mobile-nav-open .mobile-nav-backdrop { display: block; opacity: 1; }
+
+/* ---- Page structure: layout grid, filter bar, page title, sections
+   (verbatim, verified identical in both files — this is the piece that was
+   missing before: without this, every new build re-derives the sidebar
+   width, filter spacing, and title treatment independently) ---- */
+.layout { display: grid; grid-template-columns: 220px 1fr; gap: 28px; padding: 24px 0 80px; min-height: calc(100vh - 60px); transition: grid-template-columns 0.22s ease, gap 0.22s ease; }
+.filters { display: flex; gap: 14px; flex-wrap: wrap; padding-bottom: 14px; margin-bottom: 18px; border-bottom: 1px solid var(--line); align-items: end; }
+.select-wrap { display: flex; flex-direction: column; gap: 4px; }
+.select-label { font-family: var(--font-body); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 500; }
+select { font-family: var(--font-body); font-size: 13px; padding: 6px 32px 6px 10px; border: 1px solid var(--line-2); background: var(--bg); border-radius: 4px; appearance: none; cursor: pointer; color: var(--ink); font-weight: 500; background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231A2238' fill='none' stroke-width='1.4'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; min-width: 130px; }
+select:focus { outline: 2px solid var(--cyan); outline-offset: -1px; }
+.page-title { font-family: var(--font-display); font-weight: 700; font-size: 28px; line-height: 1.1; color: var(--navy); letter-spacing: -0.015em; }
+.page-title-subtle { font-weight: 400; font-size: 16px; color: var(--ink-3); margin-left: 6px; letter-spacing: 0; }
+.page-subtitle { font-family: var(--font-display); font-weight: 500; font-size: 18px; color: var(--cyan); margin-top: -2px; margin-bottom: 4px; letter-spacing: -0.01em; }
+.section { display: none; }
+.section.active { display: block; }
+
+/* ---- Mobile-first responsive layer (verbatim, verified identical in both
+   updated source files). Below ~900px the shell transforms: the sidenav
+   becomes an off-canvas drawer, the topbar compresses, filters/page titles
+   step down in size. ---- */
+@media (max-width: 900px) {
+  .container { padding: 0 16px; }
+  .layout { display: block; padding: 24px 0 80px; }
+  .sidenav {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 260px; max-width: 80vw;
+    background: var(--surface) !important;
+    padding: 16px 14px 20px;
+    padding-top: calc(16px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    padding-right: 14px;
+    border-right: 1px solid var(--line); border-bottom: 0;
+    box-shadow: 4px 0 20px rgba(15, 31, 74, 0.12);
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    overflow-y: auto;
+    max-height: 100vh;
+    max-height: 100dvh;
+  }
+  body.mobile-nav-open .sidenav { transform: translateX(0); }
+  /* A "collapsed" state set on desktop can linger after resizing down; force
+     the drawer visible again — its visibility is governed by transform,
+     not opacity, once we're in drawer mode. */
+  .layout.sidebar-collapsed .sidenav { opacity: 1; pointer-events: auto; overflow-y: auto; }
+  /* Desktop collapse / expand affordances don't apply in drawer mode. */
+  .sidenav-toggle { display: none; }
+  .sidenav-expand { display: none !important; }
+  /* Show the hamburger that opens the drawer. */
+  .topbar .mobile-nav-toggle { display: inline-flex; }
+  /* Touch target minimums — keeps tap targets comfortable without forcing
+     the same sizing on desktop, where pointer precision is finer. */
+  .sidenav button[data-section] { padding: 10px 12px; font-size: 14px; }
+  .segmented { height: auto; }
+  .segmented button { min-height: 36px; }
+}
+
+@media (max-width: 640px) {
+  .topbar { padding: 10px 0; }
+  /* brand-mark has flex:1, so it expands and pushes the button cluster to
+     the right; right-aligning the layer contents keeps both of its
+     cross-fading layers hugging the right edge regardless of which is
+     wider. */
+  .brand-mark-layer { justify-content: flex-end; }
+  .mobile-nav-toggle { display: inline-flex; }
+  .brand-mark .title { font-size: 16px; }
+  .brand-mark .sub { font-size: 12px; }
+  .layout { display: block; padding: 16px 0 60px; }
+  .page-title { font-size: 20px; }
+  .page-subtitle { font-size: 14px; }
+  .filters { gap: 10px; padding-bottom: 12px; margin-bottom: 14px; }
+  .export-menu { right: -6px; min-width: 240px; }
+  .settings-menu { right: -6px; min-width: 260px; }
+}
+
+/* ==========================================================================
+   END VERBATIM SOURCE
+   ========================================================================== */
+
+
+/* ==========================================================================
+   CURATED CONVENIENCE ADDITIONS
+   ==========================================================================
+   Everything below is NOT copied verbatim — the source dashboards repeat
+   these values inline rather than naming them as variables. This section
+   packages the values already verified in the reference docs (identical
+   hex/rgba values, cross-checked against source) into reusable classes and
+   custom properties for a new build. Nothing here introduces a new color,
+   size, or timing value not already documented and verified elsewhere.
+   ========================================================================== */
+
+:root {
+  /* Shadow scale — navy-tinted at every elevation except the cyan focus ring */
+  --shadow-card:     0 2px 6px rgba(15,31,74,0.08);
+  --shadow-panel:    0 3px 12px rgba(15,31,74,0.09);
+  --shadow-menu:     0 12px 32px rgba(15,31,74,0.16);
+  --shadow-drawer:   4px 0 20px rgba(15,31,74,0.12);
+  --shadow-modal:    0 24px 64px rgba(15,31,74,0.28);
+  --shadow-focus:    0 0 0 2px rgba(21,181,219,0.18);
+
+  /* Radius scale */
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+
+  /* Motion */
+  --ease-fast: 0.12s ease;
+  --ease-med:  0.15s ease;
+  --ease-slow: 0.22s ease;
+}
+
+/* Status pill — the cond-pos/cond-neg table-cell pattern generalized into a
+   standalone inline component, using the same --pos-bg/--pos-fg tokens */
+.pill { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-body); font-weight: 600; font-size: 12px; padding: 3px 9px; border-radius: var(--radius-md); }
+.pill.pos { background: var(--pos-bg); color: var(--pos-fg); }
+.pill.neg { background: var(--neg-bg); color: var(--neg-fg); }
+
+/* Primary button — modeled on the one verbatim primary-button instance in
+   source (.load-embedded-btn) since it's the only filled/primary button
+   pattern either dashboard defines; values below match that rule exactly */
+.btn-primary { font-family: var(--font-body); font-size: 14px; font-weight: 600; color: var(--surface) !important; background: var(--cyan); border: none; border-radius: var(--radius-lg); padding: 12px 28px; min-height: 44px; cursor: pointer; transition: background var(--ease-fast), transform 0.06s; }
+.btn-primary:hover { background: var(--navy); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-primary:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+</style>
+<style>
+  /* Page-specific placeholder content only — everything structural above
+     this line comes from design-tokens.css and should not be edited here. */
+  .content-card { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 20px; box-shadow: 0 2px 6px rgba(15,31,74,0.08); margin-bottom: 16px; }
+  .content-card + .content-card { margin-top: 16px; }
+  .placeholder-note { font-size: 12px; color: var(--ink-3); font-style: italic; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="container">
+    <div class="topbar-inner">
+      <!-- Hamburger — hidden on desktop, shown once the responsive layer
+           kicks in. Opens the sidenav as an off-canvas drawer on mobile. -->
+      <button type="button" class="mobile-nav-toggle" id="mobile-nav-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="sidenav-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+
+      <!-- BRAND MARK: default layer shows the dashboard title + reporting
+           period; compact layer shows the active page's title once the user
+           scrolls past it (wired up by refreshTopbar()/updateTopbarScrollState()
+           below — update the id="brand-mark-compact-*" spans from your
+           .page-title/.page-subtitle on every section switch). -->
+      <div class="brand-mark" id="brand-mark" role="link" tabindex="0" title="Go to Summary">
+        <div class="brand-mark-layer brand-mark-default">
+          <span class="title">New Dashboard</span>
+          <span class="sub" id="brand-mark-sub">July 2026</span>
+        </div>
+        <div class="brand-mark-layer brand-mark-compact" aria-hidden="true">
+          <span class="title" id="brand-mark-compact-title"></span>
+          <span class="sub" id="brand-mark-compact-sub"></span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button type="button" class="icon-btn" id="reload-btn" aria-label="Upload or replace CSV data" title="Upload or replace CSV data">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        </button>
+
+        <div class="export-wrap" id="export-wrap">
+          <button type="button" class="export-btn" id="export-btn" aria-haspopup="true" aria-expanded="false" aria-label="Export" title="Download a copy of this dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          </button>
+          <div class="export-menu" id="export-menu" role="menu" aria-label="Export options">
+            <button type="button" class="export-menu-item" data-export="data" role="menuitem">
+              <span class="export-item-title">Download with data</span>
+              <span class="export-item-sub">Embeds loaded data into the file</span>
+            </button>
+            <button type="button" class="export-menu-item" data-export="blank" role="menuitem">
+              <span class="export-item-title">Download without data</span>
+              <span class="export-item-sub">Removes any embedded data</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SETTINGS: gear opens a popover of .settings-row blocks. The
+             Appearance row (light/dark) is wired below; add more rows the
+             same way — each its own .settings-row. -->
+        <div class="settings-wrap" id="settings-wrap">
+          <button type="button" class="settings-btn" id="settings-btn" aria-haspopup="true" aria-expanded="false" aria-label="Settings" title="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </button>
+          <div class="settings-menu" id="settings-menu" role="menu" aria-label="Settings">
+            <div class="settings-row">
+              <span class="settings-row-label">Appearance</span>
+              <div class="segmented" role="radiogroup" aria-label="Appearance">
+                <button type="button" data-theme-choice="light" role="radio" aria-checked="true" class="active">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>Light
+                </button>
+                <button type="button" data-theme-choice="dark" role="radio" aria-checked="false">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>Dark
+                </button>
+              </div>
+            </div>
+            <!-- Future settings rows go here, each its own .settings-row. -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Expand button, shown only while the desktop sidebar is collapsed -->
+<button type="button" class="sidenav-expand" id="sidenav-expand" title="Open sidebar" aria-label="Open sidebar">
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="2.5" y1="4.5" x2="13.5" y2="4.5"></line><line x1="2.5" y1="8" x2="13.5" y2="8"></line><line x1="2.5" y1="11.5" x2="13.5" y2="11.5"></line></svg>
+</button>
+<!-- Tap-to-dismiss overlay behind the mobile drawer -->
+<div id="mobile-nav-backdrop" class="mobile-nav-backdrop" aria-hidden="true"></div>
+
+<div class="container">
+  <div class="layout" id="layout">
+
+    <!-- SIDENAV: group sections under an <h3> eyebrow label. Add new
+         data-section buttons here, then a matching <section id="section-X">
+         below. The active button and active section are kept in sync by
+         the switchSection() script at the bottom of this file. -->
+    <aside class="sidenav" id="sidenav-wrap">
+      <button type="button" class="sidenav-toggle" id="sidenav-collapse" title="Collapse sidebar" aria-label="Collapse sidebar">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="2.5" y1="4.5" x2="13.5" y2="4.5"></line><line x1="2.5" y1="8" x2="13.5" y2="8"></line><line x1="2.5" y1="11.5" x2="13.5" y2="11.5"></line></svg>
+      </button>
+      <h3>Overview</h3>
+      <button type="button" data-section="summary" class="active">Summary</button>
+      <button type="button" data-section="trends">Trends</button>
+      <h3>Deep dive</h3>
+      <button type="button" data-section="breakdown">Breakdown</button>
+    </aside>
+
+    <main>
+      <!-- FILTERS: one .filters bar per page, .select-wrap per control.
+           Mix native <select> dropdowns, .segmented radio-groups, or
+           .brand-badge pill groups as needed — all three patterns are
+           already styled by design-tokens.css. -->
+      <div class="filters">
+        <div class="select-wrap">
+          <label class="select-label" for="f-period">Reporting month</label>
+          <select id="f-period">
+            <option>July 2026</option>
+            <option>June 2026</option>
+            <option>May 2026</option>
+          </select>
+        </div>
+        <div class="select-wrap">
+          <label class="select-label">Compare</label>
+          <div class="segmented" role="radiogroup" aria-label="Compare">
+            <button type="button" class="active" role="radio" aria-checked="true">Absolute</button>
+            <button type="button" role="radio" aria-checked="false">MoM %</button>
+            <button type="button" role="radio" aria-checked="false">Mo3M %</button>
+            <button type="button" role="radio" aria-checked="false">YoY %</button>
+          </div>
+        </div>
+      </div>
+
+      <section class="section active" id="section-summary">
+        <div class="page-title" id="summary-title">Summary</div>
+        <div class="content-card" style="margin-top:20px;">
+          <p class="placeholder-note">Replace this card with real content — the shell (topbar, sidenav, filters, title) is already wired and styled.</p>
+        </div>
+      </section>
+
+      <section class="section" id="section-trends">
+        <div class="page-title" id="trends-title">Trends</div>
+        <div class="content-card" style="margin-top:20px;">
+          <p class="placeholder-note">Trends section placeholder.</p>
+        </div>
+      </section>
+
+      <section class="section" id="section-breakdown">
+        <div class="page-title" id="breakdown-title">Breakdown</div>
+        <div class="content-card" style="margin-top:20px;">
+          <p class="placeholder-note">Breakdown section placeholder.</p>
+        </div>
+      </section>
+    </main>
+
+  </div>
+</div>
+
+<script>
+  // Minimal section-switching, matching the source dashboards' pattern:
+  // .section.active { display:block } is already defined in the CSS;
+  // this just keeps one section + one sidenav button "active" at a time.
+  function switchSection(id) {
+    document.querySelectorAll('.section').forEach(function (s) {
+      s.classList.toggle('active', s.id === 'section-' + id);
+    });
+    document.querySelectorAll('.sidenav button[data-section]').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-section') === id);
+    });
+    refreshTopbar();
+    // Auto-close the mobile drawer when a section is tapped, so the page
+    // underneath doesn't swap beneath an open drawer.
+    if (document.body.classList.contains('mobile-nav-open')) setMobileNavOpen(false);
+  }
+  document.querySelectorAll('.sidenav button[data-section]').forEach(function (btn) {
+    btn.addEventListener('click', function () { switchSection(btn.getAttribute('data-section')); });
+  });
+
+  // ---- Brand mark: copy the active section's title into the topbar's
+  // compact layer, and cross-fade to it once that title scrolls behind the
+  // sticky topbar. Call refreshTopbar() again after anything that changes
+  // the active section's title text (filters, compare mode, etc). ----
+  function getActiveSectionTitleEl() {
+    var active = document.querySelector('.section.active');
+    return active ? active.querySelector('.page-title') : null;
+  }
+  function syncCompactTitle() {
+    var compactTitle = document.getElementById('brand-mark-compact-title');
+    var compactSub = document.getElementById('brand-mark-compact-sub');
+    if (!compactTitle || !compactSub) return;
+    var titleEl = getActiveSectionTitleEl();
+    if (!titleEl) { compactTitle.innerHTML = ''; compactSub.textContent = ''; return; }
+    compactTitle.innerHTML = titleEl.innerHTML;
+    var subEl = document.querySelector('.section.active .page-subtitle');
+    compactSub.textContent = subEl ? subEl.textContent : '';
+  }
+  var topbarRafToken = null;
+  function updateTopbarScrollState() {
+    topbarRafToken = null;
+    var brandMark = document.getElementById('brand-mark');
+    var titleEl = getActiveSectionTitleEl();
+    if (!brandMark || !titleEl) { if (brandMark) brandMark.classList.remove('scrolled'); return; }
+    var titleTop = titleEl.getBoundingClientRect().top;
+    var topbarH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h')) || 56;
+    brandMark.classList.toggle('scrolled', titleTop < topbarH);
+  }
+  function scheduleTopbarUpdate() {
+    if (topbarRafToken !== null) return;
+    topbarRafToken = requestAnimationFrame(updateTopbarScrollState);
+  }
+  window.addEventListener('scroll', scheduleTopbarUpdate, { passive: true });
+  function refreshTopbar() { syncCompactTitle(); updateTopbarScrollState(); }
+
+  // ---- Sidebar collapse / expand (desktop slim-rail behaviour) ----
+  function setSidebarCollapsed(collapsed) {
+    document.body.classList.toggle('sidebar-collapsed', collapsed);
+    document.getElementById('layout').classList.toggle('sidebar-collapsed', collapsed);
+  }
+  document.getElementById('sidenav-collapse').addEventListener('click', function () { setSidebarCollapsed(true); });
+  document.getElementById('sidenav-expand').addEventListener('click', function () { setSidebarCollapsed(false); });
+
+  // ---- Mobile drawer open / close. Distinct from the collapse behaviour
+  // above — the drawer overlays content rather than sharing the layout
+  // grid. State lives on <body> via .mobile-nav-open so any child (sidebar,
+  // backdrop) can react purely via CSS. ----
+  function setMobileNavOpen(open) {
+    document.body.classList.toggle('mobile-nav-open', open);
+    var toggle = document.getElementById('mobile-nav-toggle');
+    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.body.style.overflow = open ? 'hidden' : '';
+  }
+  document.getElementById('mobile-nav-toggle').addEventListener('click', function () {
+    setMobileNavOpen(!document.body.classList.contains('mobile-nav-open'));
+  });
+  document.getElementById('mobile-nav-backdrop').addEventListener('click', function () { setMobileNavOpen(false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && document.body.classList.contains('mobile-nav-open')) setMobileNavOpen(false);
+  });
+
+  // ---- Generic open/close wiring for the export + settings popovers:
+  // click the trigger to toggle, click outside or Escape to close. ----
+  function wireDropdown(wrapId, btnId) {
+    var wrap = document.getElementById(wrapId);
+    var btn = document.getElementById(btnId);
+    if (!wrap || !btn) return;
+    var close = function () { wrap.classList.remove('open'); btn.setAttribute('aria-expanded', 'false'); };
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = wrap.classList.toggle('open');
+      btn.setAttribute('aria-expanded', String(open));
+    });
+    document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+  }
+  wireDropdown('export-wrap', 'export-btn');
+  wireDropdown('settings-wrap', 'settings-btn');
+
+  // ---- Theme (light/dark) toggle. THEME_KEY must match the no-FOUC
+  // bootstrap script in <head> — rename both together per dashboard. ----
+  (function () {
+    var THEME_KEY = 'dashboard-theme';
+    function applyTheme(theme) {
+      var dark = theme === 'dark';
+      var root = document.documentElement;
+      if (dark) { root.setAttribute('data-theme', 'dark'); root.style.colorScheme = 'dark'; }
+      else { root.removeAttribute('data-theme'); root.style.colorScheme = 'light'; }
+      try { localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light'); } catch (e) {}
+      var buttons = document.querySelectorAll('#settings-menu button[data-theme-choice]');
+      buttons.forEach(function (b) {
+        var active = b.getAttribute('data-theme-choice') === theme;
+        b.classList.toggle('active', active);
+        b.setAttribute('aria-checked', String(active));
+      });
+    }
+    var initial = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    applyTheme(initial);
+    document.querySelectorAll('#settings-menu button[data-theme-choice]').forEach(function (b) {
+      b.addEventListener('click', function () { applyTheme(b.getAttribute('data-theme-choice')); });
+    });
+  })();
+
+  refreshTopbar();
+</script>
+
+</body>
+</html>

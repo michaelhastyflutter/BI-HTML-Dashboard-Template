@@ -1,0 +1,831 @@
+/* ==========================================================================
+   WIDGET LIBRARY — optional, per-report components
+   ==========================================================================
+   This file is NOT linked by boilerplate.html and is not part of the shared
+   shell in design-tokens.css. It's a catalog of the fancier, purpose-built
+   widgets the source dashboards (202607_Product_Pulse.html,
+   Commercial_Pulse_-_July_2026.html, and — added Aug 2026 —
+   UK_Brand_Pulse_-_Dashboard_-_Jul-26.html) grew for their own report
+   content — chart modals, driver tables, the pyramid/brand grids,
+   definition tables, threshold chips, the multi-file upload flow, a
+   "Key Changes" tab, an in-browser AI data assistant, and so on.
+
+   REFRESH (Aug 2026): added two new CSS-only sections sourced from
+   UK_Brand_Pulse — "KEY CHANGES TAB" and "AI DATA ASSISTANT (shell)".
+   Several JS-heavy widgets from that same file (a native-editable-PPTX
+   export engine, and Excel/CSV ingestion helpers) didn't fit this file's
+   CSS-only format — they're catalogued instead in the new sibling file
+   widget-scripts.js, using the same copy-the-labeled-block pattern.
+
+   LATER REFRESH (Aug 2026): closed out a round of gaps against
+   202607_Product_Pulse specifically — added "VERTICAL / SEGMENT FILTER"
+   (no new CSS — it's a plain select), "BRAND-SPLIT" (a multi-brand
+   overlay picker, distinct from the single-select .brand-pill-group
+   above), and "DATA DICTIONARY PAGE" (namespaced `.dd-*` rather than
+   `.def-table` — Product Pulse's own Definitions page uses a visually
+   different table than Commercial Pulse's `.def-table` earlier in this
+   file, so reusing that name would collide). The matching JS for the
+   brand-split overlay chart lives in widget-scripts.js.
+
+   These were deliberately left out of design-tokens.css because they're
+   report-specific, not shell-level — see PROMPT_GUIDE.md. This file exists
+   so they aren't lost or reinvented from scratch: pull the block you need
+   into your dashboard's own <style>, reuse the class names as-is (so any
+   copied JS keeps working), and wire up the JS noted in each section's
+   comment. Everything below uses only the color/font/shadow/radius tokens
+   already defined in design-tokens.css — nothing here introduces a new
+   design value.
+
+   PROVENANCE: each section says whether it's byte-identical between both
+   source files, or specific to one. Single-source widgets are still safe to
+   use in a new dashboard — they just haven't been cross-checked against a
+   second report, so double check they fit your data shape before reusing.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   CHART CARD & CHART MODAL (verbatim, identical in both sources)
+   ==========================================================================
+   .chart-card is a bordered panel wrapping a single chart, with an optional
+   colored .chart-title-bar strip. .chart-wrap / .chart-wrap-tall /
+   .chart-wrap-sm size the canvas; use whichever fits your layout.
+
+   .chart-modal is a full-detail lightbox for "expand this chart" — give the
+   trigger element a click handler that adds .open to .chart-modal (and
+   removes it, or listens for the .chart-modal-close click / Escape, to
+   close). The export button inside is its own small dropdown, following
+   the same .open-class pattern as .export-wrap in the shell.
+
+   OPTIONAL PPT EXPORT (added Aug 2026, from UK_Brand_Pulse): a second
+   .chart-modal-download button (e.g. id="chart-modal-ppt") drops in beside
+   the existing PNG/CSV one with zero new CSS — it's the same class. What's
+   new is the JS behind it: a from-scratch, dependency-free .pptx builder
+   that produces a NATIVE, EDITABLE PowerPoint chart (not a pasted image),
+   with an embedded SheetJS workbook so PowerPoint's "Edit Data" works. See
+   "PPTX EXPORT ENGINE" in widget-scripts.js for the full, verbatim,
+   reusable engine plus the per-chart-type contract it expects.
+   ========================================================================== */
+.chart-card { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; margin-bottom: 18px; }
+.chart-title-bar { background: var(--pink); color: #FFFFFF; font-family: var(--font-display); font-weight: 600; font-size: 13px; padding: 10px 14px; text-align: center; letter-spacing: -0.005em; }
+.chart-title-bar.navy { background: var(--navy); }
+.chart-title-bar.gray { background: var(--ink-3); }
+.chart-body { padding: 16px 18px; }
+.chart-wrap { position: relative; height: 280px; }
+.chart-wrap-tall { position: relative; height: 360px; }
+.chart-wrap-sm { position: relative; height: 180px; }
+
+.chart-modal { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; }
+.chart-modal.open { display: flex; animation: modal-fade 0.18s ease-out; }
+@keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+.chart-modal-backdrop { position: absolute; inset: 0; background: rgba(15, 31, 74, 0.55); backdrop-filter: blur(2px); }
+.chart-modal-content { position: relative; background: var(--surface) !important; border-radius: 8px; padding: 22px 28px 24px; max-width: 92vw; width: 960px; max-height: 90vh; box-shadow: 0 24px 64px rgba(15, 31, 74, 0.28); display: flex; flex-direction: column; }
+.chart-modal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding-right: 44px; margin-bottom: 14px; }
+.chart-modal-header-text { flex: 1; min-width: 0; }
+.chart-modal-title { font-family: var(--font-display); font-weight: 700; font-size: 20px; color: var(--navy); letter-spacing: -0.01em; line-height: 1.2; }
+.chart-modal-subtitle { font-family: var(--font-body); font-size: 12px; color: var(--ink-3); margin-top: 4px; font-weight: 500; }
+.chart-modal-close { position: absolute; top: 12px; right: 14px; background: transparent; border: none; font-size: 26px; line-height: 1; color: var(--ink-3); cursor: pointer; padding: 4px 10px 6px; border-radius: 4px; transition: all 0.12s; }
+.chart-modal-close:hover { background: var(--bg-2); color: var(--ink); }
+.chart-modal-close:focus { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.chart-modal-header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.chart-modal-download { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-body); font-size: 12px; font-weight: 500; padding: 6px 12px; border: 1px solid var(--line-2); background: var(--bg); cursor: pointer; border-radius: 4px; color: var(--ink-2); transition: all 0.12s; }
+.chart-modal-download:hover { background: var(--bg-2); border-color: var(--ink-3); color: var(--ink); }
+.chart-modal-download:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.chart-modal-download .download-icon { font-size: 13px; line-height: 1; color: var(--cyan); }
+.chart-modal-download .export-caret { font-size: 9px; margin-left: 1px; color: var(--ink-3); }
+.chart-modal-export { position: relative; }
+.chart-modal-export-menu { position: absolute; top: calc(100% + 6px); right: 0; min-width: 180px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 32px rgba(15,31,74,0.16); padding: 6px; z-index: 1500; display: none; }
+.chart-modal-export.open .chart-modal-export-menu { display: block; }
+.chart-modal-export-menu .export-opt { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: none; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-family: var(--font-body); font-size: 12px; font-weight: 500; color: var(--ink); }
+.chart-modal-export-menu .export-opt:hover { background: var(--bg-2); }
+.chart-modal-export-menu .export-opt:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.chart-modal-export-menu .export-opt .opt-icon { font-size: 13px; line-height: 1; color: var(--cyan); width: 14px; text-align: center; }
+.chart-modal-body { position: relative; flex: 1; min-height: 0; }
+.chart-modal-canvas-wrap { position: relative; height: 480px; width: 100%; }
+@media (max-width: 700px) {
+  .chart-modal-content { padding: 18px 16px 20px; width: 96vw; }
+  .chart-modal-canvas-wrap { height: 360px; }
+  .chart-modal-title { font-size: 16px; }
+}
+@media (max-width: 640px) {
+  /* Full-screen on phones, with safe-area padding for the notch / home bar. */
+  .chart-modal-content { width: 100vw; max-width: 100vw; height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; border-radius: 0; padding: 14px 16px 16px; padding-top: calc(14px + env(safe-area-inset-top, 0px)); padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .chart-modal-title { font-size: 16px; }
+  .chart-modal-header { flex-direction: column; align-items: stretch; gap: 10px; padding-right: 32px; margin-bottom: 12px; }
+  .chart-modal-header-text { padding-right: 0; }
+  .chart-modal-subtitle { font-size: 12px; }
+  .chart-modal-header-actions { flex-wrap: wrap; justify-content: flex-start; gap: 8px; }
+  .chart-modal-header-actions .segmented { flex-wrap: wrap; }
+}
+
+
+/* ==========================================================================
+   DRIVER TABLE & WATERFALL (verbatim, identical in both sources)
+   ==========================================================================
+   A "what moved the number" breakdown: three headline cards, a waterfall
+   chart, and a supporting table of the same deltas. Use whichever pieces
+   fit — the headline cards work standalone even without the waterfall.
+   ========================================================================== */
+.driver-headline { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 22px; }
+.driver-headline-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 14px 18px; }
+.driver-headline-label { font-family: var(--font-body); font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.driver-headline-value { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: var(--navy); margin-top: 4px; line-height: 1.1; }
+.driver-headline-sub { font-family: var(--font-body); font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.driver-headline-card.delta .driver-headline-value.pos { color: #1F9D55; }
+.driver-headline-card.delta .driver-headline-value.neg { color: #D6336C; }
+.driver-waterfall-wrap { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px 14px; margin-bottom: 22px; }
+.driver-waterfall-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+.driver-waterfall-title { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--navy); }
+.driver-waterfall-note { font-family: var(--font-body); font-size: 11px; color: var(--ink-3); }
+.driver-waterfall-canvas { position: relative; height: 380px; width: 100%; }
+.driver-empty { font-family: var(--font-body); font-size: 13px; color: var(--ink-3); padding: 32px; text-align: center; }
+.driver-table-wrap { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 14px 18px 18px; }
+.driver-table-title { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--navy); margin-bottom: 10px; }
+.driver-table { width: 100%; border-collapse: collapse; font-family: var(--font-body); font-size: 12px; }
+.driver-table th { text-align: left; font-weight: 500; color: var(--ink-3); border-bottom: 1px solid var(--line); padding: 6px 12px 8px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+.driver-table th.num, .driver-table td.num { text-align: right; padding-right: 16px; font-variant-numeric: tabular-nums; }
+.driver-table td { padding: 7px 12px 7px 0; border-bottom: 1px solid var(--line); color: var(--ink); }
+.driver-table tr:last-child td { border-bottom: none; }
+.driver-table td.delta-pos { color: #1F9D55; font-weight: 500; }
+.driver-table td.delta-neg { color: #D6336C; font-weight: 500; }
+.driver-table td.label { font-weight: 500; color: var(--ink-2); }
+.driver-table tr.total td { font-weight: 700; color: var(--navy); border-top: 1px solid var(--line); }
+@media (max-width: 700px) {
+  .driver-headline { grid-template-columns: 1fr; gap: 10px; margin-bottom: 16px; }
+  .driver-headline-card { padding: 10px 14px; }
+  .driver-headline-value { font-size: 18px; }
+  .driver-table-wrap { padding: 12px 14px 14px; overflow-x: auto; }
+  .driver-table { min-width: 460px; font-size: 11px; }
+}
+
+
+/* ==========================================================================
+   METRIC / PYRAMID GRID (mixed provenance — see notes per block)
+   ==========================================================================
+   A grid of metric cells with colored row-labels running down the left
+   side (age band, value tier, gender, product, year-activated, etc — swap
+   the .pg-row-label.* modifier for whichever dimension you're slicing by;
+   the six-shade navy ramp already covers up to 6 bands).
+   ========================================================================== */
+/* Base grid + row labels — verbatim, identical in both sources. */
+.product-grid { display: grid; grid-template-columns: 44px repeat(var(--cols, 3), minmax(0,1fr)); gap: 0; margin-bottom: 18px; border: 1px solid var(--line); border-radius: 6px; overflow: clip; }
+.product-grid > * { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.product-grid > *:nth-child(var(--ncol)n) { border-right: 0; }
+.pg-header { background: var(--bg); padding: 10px; text-align: center; font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--ink); display: flex; align-items: center; justify-content: center; gap: 8px; position: sticky; top: var(--topbar-h); z-index: 50; }
+.pg-header-blank { background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 4px; position: sticky; top: var(--topbar-h); z-index: 50; }
+.pg-cell { background: var(--bg); padding: 10px 12px; min-height: 160px; }
+.pg-cell-empty { background: var(--bg-2); display: flex; align-items: center; justify-content: center; color: var(--ink-3); font-size: 11px; font-style: italic; min-height: 160px; padding: 10px; }
+.pg-cell.clickable { cursor: pointer; transition: background 0.12s, box-shadow 0.12s; position: relative; }
+.pg-cell.clickable::after { content: '⤢'; position: absolute; top: 6px; right: 8px; font-size: 11px; color: var(--ink-3); opacity: 0; transition: opacity 0.12s; pointer-events: none; }
+.pg-cell.clickable:hover { background: var(--bg-2); box-shadow: inset 0 0 0 1.5px var(--cyan); }
+.pg-cell.clickable:hover::after { opacity: 0.9; }
+.pg-row-label { display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 600; font-size: 11px; color: #FFFFFF; padding: 8px 2px; text-align: center; }
+.pg-row-label span { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 0.08em; }
+.pg-row-label.clickable { cursor: pointer; position: relative; transition: filter 0.15s; }
+.pg-row-label.clickable:hover { filter: brightness(1.18); }
+.pg-row-label.clickable:focus { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.pg-row-label.clickable::after { content: '›'; position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); font-family: var(--font-display); font-weight: 700; font-size: 16px; line-height: 1; opacity: 0.85; }
+/* Product accent variants use the shell's --prod-* tokens */
+.pg-row-label.sports { background: var(--prod-sports); }
+.pg-row-label.gaming { background: var(--prod-gaming); }
+.pg-row-label.exchange { background: var(--prod-exchange); }
+/* Six-shade navy ramp — reuse for any 6-band (or fewer) dimension: age,
+   value tier, year activated, gender, customer type, etc. */
+.pg-row-label.hvplus, .pg-row-label.vhv, .pg-row-label.metric,
+.pg-row-label.age-1, .pg-row-label.gen-female, .pg-row-label.ct-activated,
+.pg-row-label.ya-2026 { background: #0F1F4A; }
+.pg-row-label.hv, .pg-row-label.age-2, .pg-row-label.ya-2025 { background: #2E4180; }
+.pg-row-label.gen-male, .pg-row-label.ct-reactivated { background: #4A6BAA; }
+.pg-row-label.mv, .pg-row-label.age-3, .pg-row-label.ya-2024 { background: #5A7AC4; }
+.pg-row-label.lv, .pg-row-label.age-4, .pg-row-label.gen-unknown,
+.pg-row-label.ct-retained, .pg-row-label.ya-2023 { background: #9BB0DD; color: #14110F; }
+.pg-row-label.nv, .pg-row-label.age-5, .pg-row-label.ya-pre2023 { background: #C5D2EA; color: #14110F; }
+.pg-row-label.age-6 { background: #E5EBF6; color: #14110F; }
+.pg-row-label.metric { font-size: 11px; line-height: 1.25; padding: 8px 12px; }
+@media (max-width: 640px) {
+  .product-grid .pg-cell { min-height: 140px; }
+  .pg-header { padding: 8px 6px; }
+}
+
+/* Drag-to-reorder metric rows — Commercial Pulse only. Pair with a drag
+   library (or plain HTML5 drag events); these classes are just the states. */
+.pg-row-label.metric.md-draggable { cursor: grab; }
+.pg-row-label.metric.md-draggable:active { cursor: grabbing; }
+.pg-row-label.metric.md-dragging { opacity: 0.4; }
+.pg-row-label.metric.md-drop-target { outline: 2px dashed var(--cyan); outline-offset: -2px; }
+
+/* Pyramid/card variant of the grid — Product Pulse only. Gap-separated
+   card tiles with sticky corner/row labels, instead of a bordered table;
+   use this when cells need more breathing room than .pg-cell allows. */
+.pyr-grid { display: grid; gap: 10px 12px; align-items: stretch; margin: 24px 0 18px; min-width: min-content; }
+.pyr-grid .pgv2-corner { position: sticky; left: 0; background: var(--surface); z-index: 4; box-shadow: 0 0 0 12px var(--surface); }
+.pyr-grid .pgv2-head { display: flex; align-items: flex-end; justify-content: center; padding-bottom: 4px; }
+.pyr-grid .pgv2-rowlabel { position: sticky; left: 0; background: var(--surface); z-index: 3; box-shadow: 0 0 0 12px var(--surface); display: flex; align-items: center; padding-right: 10px; font-family: var(--font-body); font-size: 12.5px; font-weight: 600; color: var(--ink); line-height: 1.2; min-width: 0; overflow-wrap: break-word; }
+.pyr-grid .pgv2-rowlabel.conv { flex-direction: column; align-items: stretch; justify-content: center; gap: 2px; font-size: 11px; font-weight: 500; color: var(--ink-3); }
+.pyr-grid .pgv2-rowlabel .conv-eyebrow { font-family: var(--font-body); font-size: 8.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+.pyr-grid .pgv2-rowlabel .conv-name { line-height: 1.2; white-space: normal; overflow: visible; text-overflow: clip; }
+.pyr-grid .pgv2-cell { position: relative; border: 1px solid var(--line-2); border-radius: 9px; background: var(--surface); box-shadow: 0 2px 6px rgba(15,31,74,0.08); padding: 8px 10px; transition: border-color 0.12s, box-shadow 0.12s; }
+.pyr-grid .pgv2-cell.clickable { cursor: pointer; }
+.pyr-grid .pgv2-cell.clickable:hover { border-color: var(--cyan); box-shadow: 0 2px 10px rgba(15,31,74,0.14); }
+.pyr-grid .pgv2-cell.clickable::after { content: '\2922'; position: absolute; top: 6px; right: 8px; font-size: 11px; color: var(--ink-3); opacity: 0; transition: opacity 0.12s; pointer-events: none; z-index: 2; }
+.pyr-grid .pgv2-cell.clickable:hover::after { opacity: 0.9; }
+
+
+/* ==========================================================================
+   DEFINITION / HV / SUMMARY TABLES (Commercial Pulse only)
+   ==========================================================================
+   Three flavors of dense data table:
+   - .def-table — a glossary/reference table (term + definition columns).
+   - .hv-table — a compact metrics-by-segment table with conditional
+     pos/neg cell shading.
+   - .summary-table — the heaviest of the three: two-tier headers
+     (.period-band above .brand-band), sticky/clickable row labels, spacer
+     columns between brand groups, and the same cond-pos/cond-neg shading.
+     Wrap it in .summary-table-wrap for horizontal scroll on overflow.
+
+   Looking for a fuller Definitions/data-dictionary PAGE rather than a
+   single glossary table? See "DATA DICTIONARY PAGE" (`.dd-*` classes)
+   further down — that's Product Pulse's own version, kept under a
+   different name on purpose since the two dashboards' tables look
+   different under the same "definitions" idea.
+   ========================================================================== */
+.def-table { width: 100%; border-collapse: collapse; margin-top: 16px; font-family: var(--font-body); font-size: 13px; border: 1px solid var(--line); }
+.def-table thead th { background: var(--navy); color: #FFFFFF; padding: 12px 16px; text-align: left; font-family: var(--font-display); font-weight: 600; font-size: 13px; letter-spacing: 0.01em; border-bottom: 0; }
+.def-table tbody td { padding: 11px 16px; border-bottom: 1px solid var(--line); color: var(--ink); vertical-align: top; line-height: 1.45; }
+.def-table tbody tr:last-child td { border-bottom: 0; }
+.def-table tbody tr:hover td { background: var(--bg-2); }
+.def-table td.metric-name { font-weight: 600; color: var(--navy); white-space: nowrap; width: 32%; min-width: 240px; }
+:root[data-theme="dark"] .def-table thead th { background: var(--bg-3); color: var(--ink); }
+
+.hv-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 18px; }
+.hv-table thead th { background: var(--navy); color: #FFFFFF; font-family: var(--font-display); font-weight: 600; padding: 10px; font-size: 12px; text-align: center; }
+.hv-table thead th:first-child { text-align: left; padding-left: 14px; }
+.hv-table tbody td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: center; font-family: var(--font-body); font-size: 12px; color: var(--ink); }
+.hv-table tbody td:first-child { text-align: left; padding-left: 14px; font-weight: 500; }
+.hv-table tbody td.cond-pos { background: var(--pos-bg); color: var(--pos-fg); font-weight: 600; }
+.hv-table tbody td.cond-neg { background: var(--neg-bg); color: var(--neg-fg); font-weight: 600; }
+.hv-table.compact tbody td { padding: 6px 8px; font-size: 11px; }
+:root[data-theme="dark"] .hv-table thead th { background: var(--bg-3); color: var(--ink); }
+
+.summary-table-wrap { overflow-x: auto; padding-bottom: 4px; }
+.summary-table { width: 100%; border-collapse: collapse; font-family: var(--font-body); font-size: 12px; margin-top: 12px; }
+.summary-table thead.period-band th { font-family: var(--font-display); font-weight: 600; font-size: 12px; color: var(--navy); padding: 8px 6px 4px; text-align: center; background: var(--bg-2); border-bottom: 0; letter-spacing: -0.005em; }
+.summary-table thead.brand-band th { background: transparent; padding: 10px 4px 8px; border-bottom: 1px solid var(--line); text-align: center; }
+.summary-table thead.brand-band th.spacer { background: var(--bg); border-bottom: 1px solid var(--bg); width: 14px; padding: 0; }
+.summary-table tbody td { padding: 8px 6px; text-align: center; border-bottom: 1px solid var(--line); font-family: var(--font-body); font-weight: 500; font-size: 12px; color: var(--ink); }
+.summary-table tbody td.row-label { text-align: left; font-family: var(--font-body); font-weight: 600; padding-left: 4px; color: var(--ink); min-width: 200px; }
+.summary-table tbody td.row-label.bold { font-weight: 700; color: var(--navy); }
+.summary-table tbody td.row-label.clickable-rowlabel { cursor: pointer; transition: background 0.12s, color 0.12s; }
+.summary-table tbody td.row-label.clickable-rowlabel:hover { background: var(--bg-3); color: var(--cyan); }
+.summary-table tbody td.row-label.clickable-rowlabel:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.summary-table tbody td.spacer { background: var(--bg); border-bottom: 1px solid var(--bg); }
+.summary-table tbody td.shaded { background: #EFF4FB; }
+.summary-table tbody td.cond-pos { background: var(--pos-bg); color: var(--pos-fg); font-weight: 600; }
+.summary-table tbody td.cond-neg { background: var(--neg-bg); color: var(--neg-fg); font-weight: 600; }
+/* Absolute-value cells (not YoY/MoM/Yo2Y) for signed metrics — just red
+   text, no background/weight change, to stay visually distinct from the
+   cond-neg shading above. */
+.summary-table tbody td.value-negative { color: var(--neg-fg); }
+.summary-table tbody td.clickable { cursor: pointer; transition: background 0.12s, filter 0.12s; }
+.summary-table tbody td.clickable:hover { background: var(--bg-3); }
+.summary-table tbody td.cond-pos.clickable:hover { background: var(--pos-bg); filter: brightness(0.92); }
+.summary-table tbody td.cond-neg.clickable:hover { background: var(--neg-bg); filter: brightness(0.92); }
+.summary-table tbody td.clickable:focus { outline: 2px solid var(--cyan); outline-offset: -2px; }
+@media (max-width: 900px) {
+  /* Pin the row-label column while the rest of the table scrolls
+     horizontally through brands. */
+  .summary-table { min-width: 540px; font-size: 11px; }
+  .summary-table tbody td.row-label { position: sticky; left: 0; z-index: 5; background: var(--bg); }
+  .summary-table thead.period-band th:first-child,
+  .summary-table thead.brand-band th:first-child { position: sticky; left: 0; z-index: 5; background: var(--bg-2); }
+  .summary-table thead.brand-band th:first-child { box-shadow: 2px 0 4px rgba(15, 31, 74, 0.04); }
+  .summary-table tbody td { padding: 6px 5px; }
+}
+
+/* Section headings + list used on reference/roadmap-style pages (glossary,
+   planned enhancements). Tighter scale than .page-title so a page built
+   from several of these reads as one unit, not three separate pages. */
+.dc-heading { font-family: var(--font-display); font-weight: 600; font-size: 13px; color: var(--ink-2); margin-top: 28px; margin-bottom: 0; text-transform: uppercase; letter-spacing: 0.06em; }
+.planned-list { margin: 8px 0 0; padding-left: 20px; font-family: var(--font-body); font-size: 13px; color: var(--ink-2); line-height: 1.6; }
+.planned-list li { padding: 2px 0; }
+
+
+/* ==========================================================================
+   THRESHOLD CHIPS & POPOVER (verbatim, identical in both sources)
+   ==========================================================================
+   An editable pos/neg threshold badge — click to open a small popover with
+   numeric inputs and a reset link. Good for "flag as good/bad above/below X".
+   ========================================================================== */
+.threshold-chip { padding: 3px 8px; border-radius: 3px; font-weight: 600; font-size: 11px; font-family: var(--font-body); cursor: pointer; user-select: none; transition: filter 0.15s, transform 0.15s; }
+.threshold-chip:hover { filter: brightness(0.93); }
+.threshold-chip:active { transform: scale(0.97); }
+.threshold-chip.pos { background: var(--pos-bg); color: var(--pos-fg); }
+.threshold-chip.neg { background: var(--neg-bg); color: var(--neg-fg); }
+.threshold-wrap { position: relative; display: inline-flex; gap: 6px; align-items: center; }
+.threshold-edit-hint { color: var(--ink-3); font-size: 10px; font-family: var(--font-body); margin-left: 4px; opacity: 0.6; }
+.threshold-popover { position: absolute; bottom: calc(100% + 8px); left: 0; background: white; border: 1px solid var(--line-2); border-radius: 6px; padding: 14px 16px; box-shadow: 0 10px 28px rgba(15,31,74,0.16); z-index: 100; font-family: var(--font-body); font-size: 12px; min-width: 280px; display: none; }
+.threshold-popover.open { display: block; }
+.threshold-popover-title { font-family: var(--font-display); font-weight: 600; font-size: 13px; color: var(--navy); margin-bottom: 4px; }
+.threshold-popover-sub { color: var(--ink-3); font-size: 11px; margin-bottom: 12px; }
+.threshold-popover-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.threshold-popover-row label { flex: 1; color: var(--ink-2); }
+.threshold-popover input { width: 64px; padding: 5px 7px; border: 1px solid var(--line-2); border-radius: 4px; font-family: var(--font-body); font-size: 12px; text-align: right; color: var(--ink); }
+.threshold-popover input:focus { border-color: var(--cyan); outline: none; box-shadow: 0 0 0 2px rgba(21,181,219,0.18); }
+.threshold-popover-unit { color: var(--ink-3); font-size: 11px; min-width: 26px; }
+.threshold-popover-footer { display: flex; justify-content: flex-end; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.threshold-popover-reset { color: var(--cyan); cursor: pointer; font-size: 11px; font-weight: 500; }
+.threshold-popover-reset:hover { text-decoration: underline; }
+
+
+/* ==========================================================================
+   BRAND FILTERING: pills, menu, hidden-strip, legend (mixed provenance)
+   ==========================================================================
+   Several different ways to let a viewer filter which brands are shown —
+   pick the one that fits your control, don't mix all four on one page.
+   ========================================================================== */
+/* Brand pill picker — a row of branded pill buttons reusing .brand-badge
+   colors. Inactive pills dim to 45% opacity; active is full color.
+   Verbatim, identical in both sources. */
+.brand-pill-group { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.brand-pill { border: 0; cursor: pointer; transition: opacity 0.12s, transform 0.08s; opacity: 0.45; min-width: 64px; padding: 6px 12px; }
+.brand-pill:hover { opacity: 0.85; }
+.brand-pill.active { opacity: 1; }
+.brand-pill:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/* Horizontally-scrollable variant for narrow viewports — verbatim. */
+@media (max-width: 640px) {
+  .mobile-brand-picker { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; padding: 4px 2px 8px; margin-bottom: 8px; -webkit-overflow-scrolling: touch; }
+  .mobile-brand-picker .brand-pill { flex-shrink: 0; opacity: 0.45; }
+  .mobile-brand-picker .brand-pill.active { opacity: 1; }
+}
+
+/* Clickable brand badge — turns a .brand-badge into a filter toggle with a
+   small chevron affordance. Commercial Pulse only. */
+.brand-badge.clickable-brand { position: relative; cursor: pointer; transition: filter 0.12s; padding-right: 16px; }
+.brand-badge.clickable-brand:hover { filter: brightness(1.08); }
+.brand-badge.clickable-brand:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.brand-badge.clickable-brand::after { content: '\25BE'; position: absolute; top: 4px; right: 5px; font-size: 9px; opacity: 0; transition: opacity 0.15s; line-height: 1; }
+.brand-badge.clickable-brand:hover::after, .brand-badge.clickable-brand:focus-visible::after { opacity: 0.85; }
+.brand-badge.sm.clickable-brand { padding-right: 10px; }
+.brand-badge.sm.clickable-brand::after { content: none; }
+
+/* Floating brand picker menu (fixed-position dropdown, not anchored inside
+   a .*-wrap like the topbar menus) — Commercial Pulse only. Position it
+   with JS (getBoundingClientRect of the trigger) since it's `fixed`, not
+   `absolute` relative to a wrapper. */
+.brand-menu { position: fixed; display: none; background: var(--bg); border: 1px solid var(--line-2); border-radius: 6px; box-shadow: 0 12px 32px rgba(15,31,74,0.18); padding: 6px; z-index: 200; min-width: 200px; font-family: var(--font-body); }
+.brand-menu.open { display: block; }
+.brand-menu-header { font-family: var(--font-display); font-size: 11px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; padding: 6px 10px 4px; }
+.brand-menu-sep { height: 1px; background: var(--line); margin: 4px 0; }
+.brand-menu-item { display: block; width: 100%; text-align: left; padding: 7px 10px; border: none; background: transparent; cursor: pointer; font-family: var(--font-body); font-size: 12px; color: var(--ink); border-radius: 4px; }
+.brand-menu-item:hover:not(:disabled) { background: var(--bg-2); }
+.brand-menu-item:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.brand-menu-item:disabled { color: var(--ink-3); cursor: default; }
+
+/* "N brands hidden" strip — shown above a chart/table when some brands are
+   filtered out, with a one-click "show all". Commercial Pulse only. */
+.hidden-brands-strip { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; padding: 8px 10px; background: var(--bg-2); border-radius: 4px; font-family: var(--font-body); font-size: 11px; color: var(--ink-3); }
+.hidden-brands-strip .label { font-weight: 500; margin-right: 4px; }
+.hidden-brands-strip button { font-family: var(--font-body); font-size: 11px; padding: 3px 8px; border: 1px solid var(--line-2); background: var(--bg); border-radius: 3px; cursor: pointer; color: var(--ink-2); font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
+.hidden-brands-strip button:hover { border-color: var(--ink-3); background: var(--bg-3); }
+.hidden-brands-strip button.show-all { color: var(--cyan); border-color: var(--cyan); }
+.hidden-brands-strip button.show-all:hover { background: rgba(21,181,219,0.08); }
+
+/* Chart legend as clickable chips (toggle a series on/off) — verbatim,
+   identical in both sources. Set --swatch inline per chip for its color. */
+.merged-legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.be-legend-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border: 1px solid var(--line-2); border-radius: 12px; font-family: var(--font-body); font-size: 11px; font-weight: 500; color: var(--ink-2); background: var(--bg); cursor: pointer; transition: opacity 0.12s, background 0.12s; }
+.be-legend-chip:hover { background: var(--bg-2); }
+.be-legend-chip::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--swatch); flex-shrink: 0; transition: filter 0.12s; }
+.be-legend-chip.muted { color: var(--ink-3); text-decoration: line-through; }
+.be-legend-chip.muted::before { filter: grayscale(1); opacity: 0.5; }
+.be-legend-chip:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+/* Override the global .brand-badge.sm sizing so legend badges sit tight on
+   one line instead of wrapping to the multi-line pill shape. */
+.merged-legend .brand-badge.sm { min-height: 0; white-space: nowrap; padding: 3px 10px; min-width: 0; }
+
+
+/* ==========================================================================
+   MULTI-CHART COMPARISON PANEL (verbatim, identical in both sources)
+   ==========================================================================
+   One stacked panel per metric, each holding 1–2 mini charts side by side
+   (or full-width for pages with lots of overlapping series). Use
+   .merged-panel-charts.full-width when a chart needs the extra room.
+   ========================================================================== */
+.merged-panels { display: flex; flex-direction: column; gap: 16px; margin-top: 8px; }
+.merged-panel { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 14px 18px; }
+.merged-panel-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.merged-panel-title { font-family: var(--font-display); font-weight: 600; font-size: 14px; color: var(--navy); letter-spacing: -0.005em; }
+.merged-panel-title .mp-eyebrow { display: block; font-family: var(--font-body); font-size: 9px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 2px; }
+.merged-panel.conv .merged-panel-title { font-weight: 500; color: var(--ink-2); }
+.merged-panel-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.merged-panel-charts.full-width { grid-template-columns: 1fr; gap: 22px; }
+.merged-panel-charts.full-width .merged-panel-canvas-wrap { height: 340px; }
+.merged-panel-chart { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.merged-panel-chart.combined-clickable, .merged-panel-chart.be-clickable, .merged-panel-chart.cc-clickable { cursor: pointer; padding: 6px; margin: -6px; border-radius: 4px; transition: background 0.12s; }
+.merged-panel-chart.combined-clickable:hover, .merged-panel-chart.be-clickable:hover, .merged-panel-chart.cc-clickable:hover { background: var(--bg-2); }
+.merged-panel-chart.combined-clickable:focus-visible, .merged-panel-chart.be-clickable:focus-visible, .merged-panel-chart.cc-clickable:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.merged-panel-chart-label { font-family: var(--font-display); font-weight: 500; font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.merged-panel-canvas-wrap { position: relative; height: 220px; }
+.merged-panel-empty { display: flex; align-items: center; justify-content: center; height: 220px; color: var(--ink-3); font-family: var(--font-body); font-size: 12px; font-style: italic; }
+@media (max-width: 900px) {
+  .merged-panel-charts { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .merged-panel { padding: 12px; }
+  .merged-panel-canvas-wrap { height: 200px; }
+  .merged-panel-charts.full-width .merged-panel-canvas-wrap { height: 240px; }
+  .merged-panel-title { font-size: 13px; }
+  .merged-panel-chart-label { font-size: 10px; }
+}
+
+
+/* ==========================================================================
+   MISSING-DATA CONTROLS (verbatim, identical in both sources)
+   ==========================================================================
+   "Rows" builder bar for picking which optional rows/series to include —
+   styled to match .hidden-brands-strip (a muted container holding chips).
+   ========================================================================== */
+.md-rows { margin: 2px 0 12px; }
+.md-rows-inner { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; background: var(--bg-2); border-radius: 4px; font-family: var(--font-body); font-size: 11px; color: var(--ink-3); }
+.md-rows-label { font-weight: 500; margin-right: 4px; }
+.md-rows-count { font-family: var(--font-body); font-size: 11px; font-weight: 500; color: var(--ink-3); }
+.md-chip { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-body); font-size: 11px; font-weight: 500; color: var(--ink-2); background: var(--bg); border: 1px solid var(--line-2); border-radius: 3px; padding: 3px 8px; cursor: pointer; }
+.md-chip:hover:not(:disabled) { border-color: var(--ink-3); background: var(--bg-3); }
+.md-chip:disabled { opacity: 0.55; cursor: default; }
+.md-chip:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.md-chip-name { white-space: nowrap; }
+.md-chip-x { line-height: 1; }
+.md-select { font-family: var(--font-body); font-size: 11px; font-weight: 500; color: var(--ink-2); background: var(--bg); border: 1px solid var(--line-2); border-radius: 3px; padding: 3px 8px; cursor: pointer; }
+.md-select:hover:not(:disabled) { border-color: var(--ink-3); background: var(--bg-3); }
+.md-select:disabled { opacity: 0.45; cursor: default; }
+.md-select:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+
+/* Metric-delta legend — a shared page-level key (one instance above a
+   grid, not repeated per panel). Set --swatch inline per key. */
+.metric-delta-legend { display: flex; align-items: center; gap: 18px; margin: 2px 0 12px; font-family: var(--font-body); font-size: 12px; color: var(--ink-2); flex-wrap: wrap; }
+.metric-delta-legend .metric-delta-key { display: inline-flex; align-items: center; gap: 7px; }
+.metric-delta-legend .metric-delta-swatch { width: 13px; height: 13px; border-radius: 3px; display: inline-block; background: var(--swatch); }
+.metric-delta-legend .metric-delta-note { color: var(--ink-3); }
+
+/* Greyed placeholder for a metric that doesn't apply in the current
+   context (e.g. a vertical-scoped metric with no data outside that
+   vertical) — reads as "unavailable here", not "broken" or "zero". */
+.metric-unavailable { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; min-height: 240px; padding: 32px; background: var(--bg-2); border: 1px dashed var(--line-2); border-radius: 8px; text-align: center; }
+.metric-unavailable .mu-plot { width: 100%; max-width: 420px; height: 96px; position: relative; opacity: 0.5; border-bottom: 1px solid var(--line-2); }
+.metric-unavailable .mu-plot::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--line-2); }
+.metric-unavailable .mu-copy { font-family: var(--font-body); font-size: 13px; line-height: 1.5; color: var(--ink-2); max-width: 460px; }
+.metric-unavailable .mu-copy strong { color: var(--ink); font-weight: 600; }
+.metric-unavailable .mu-hint { font-family: var(--font-body); font-size: 11px; color: var(--ink-3); }
+
+/* Generic empty-state — CSV not loaded / section has nothing to show yet. */
+.empty-state { background: var(--bg-2); border: 1px dashed var(--line-2); border-radius: 6px; padding: 48px 24px; text-align: center; margin-top: 12px; }
+.empty-state .empty-title { font-family: var(--font-display); font-weight: 600; font-size: 16px; color: var(--ink); margin-bottom: 6px; }
+.empty-state .empty-text { font-size: 13px; color: var(--ink-3); margin-bottom: 16px; max-width: 480px; margin-left: auto; margin-right: auto; }
+.empty-state .empty-action { display: inline-block; padding: 9px 20px; background: var(--pink); color: #FFFFFF; font-family: var(--font-body); font-size: 13px; font-weight: 600; border-radius: 4px; cursor: pointer; border: none; }
+.empty-state .empty-action:hover { filter: brightness(1.08); }
+
+
+/* ==========================================================================
+   MULTI-FILE UPLOAD / DROPZONE FLOW (verbatim, identical in both sources
+   except the column count, noted below)
+   ==========================================================================
+   A CSV upload screen: one or more drag-and-drop zones, status text under
+   each, cache/clear controls, and a manual fallback button. The boilerplate
+   shell's topbar already has a plain reload/upload icon button for the
+   simple case — reach for this whole flow only if your dashboard actually
+   loads its own data client-side (vs. having data baked in already).
+   ========================================================================== */
+.upload-screen { padding: 100px 0 80px; text-align: center; position: relative; }
+.upload-screen .pulse-mark { font-family: var(--font-display); font-weight: 700; font-size: 48px; color: var(--navy); letter-spacing: -0.02em; line-height: 1; margin-bottom: 4px; }
+.upload-screen .pulse-sub { font-family: var(--font-display); font-weight: 500; font-size: 22px; color: var(--cyan); margin-bottom: 24px; }
+.upload-screen h2 { font-family: var(--font-display); font-size: 18px; font-weight: 500; color: var(--ink); margin-bottom: 8px; }
+.upload-screen p { color: var(--ink-3); margin-bottom: 32px; max-width: 540px; margin-left: auto; margin-right: auto; font-size: 13px; }
+.upload-back-btn { position: absolute; top: 24px; left: 24px; display: none; align-items: center; gap: 6px; font-family: var(--font-body); font-size: 12px; padding: 8px 14px; border: 1px solid var(--line-2); background: var(--bg); cursor: pointer; border-radius: 4px; color: var(--ink-2); font-weight: 500; transition: all 0.12s; }
+.upload-back-btn.visible { display: inline-flex; }
+.upload-back-btn:hover { background: var(--bg-2); border-color: var(--ink-3); color: var(--ink); }
+.upload-back-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
+.upload-back-btn .back-arrow { font-size: 14px; line-height: 1; }
+
+/* Base dropzone is already in design-tokens.css (.dropzone/.dropzone-label/
+   .dropzone-hint). Everything below extends it for a multi-file upload
+   flow with per-zone status and required/optional tagging. */
+/* minmax(0,1fr) instead of plain 1fr forces equal-width columns even at
+   narrow viewports — plain 1fr only shares free space, so the wider
+   column's content would otherwise push its neighbour wider. Source
+   dashboards differ only in column count (Product Pulse: 2 files;
+   Commercial Pulse: 3) — set as many columns as files you're ingesting. */
+.dual-dropzone { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 760px; margin: 0 auto; }
+.dropzone-col { display: flex; flex-direction: column; }
+.dual-dropzone .dropzone { padding: 32px 24px; min-height: 200px; display: flex; flex-direction: column; justify-content: center; position: relative; max-width: none; margin: 0; }
+.dropzone-tag { position: absolute; top: 10px; right: 12px; font-family: var(--font-body); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--pink); font-weight: 600; }
+.dropzone-tag.optional { color: var(--ink-3); }
+.dropzone-status { margin-top: 14px; font-family: var(--font-body); font-size: 12px; color: var(--ink-3); font-weight: 500; word-wrap: break-word; max-width: 100%; }
+.dropzone-status.loaded { color: var(--pos-fg); }
+.dropzone-status.loading { color: var(--cyan); }
+.dropzone-status.error { color: var(--neg-fg); line-height: 1.45; }
+.dropzone.has-data { background: #F1F8EE; border-color: var(--pos-fg); }
+.dropzone.has-error { border-color: var(--neg-fg); }
+:root[data-theme="dark"] .dropzone.has-data { background: #16271B !important; }
+@media (max-width: 700px) { .dual-dropzone { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  /* Dashed drag affordance is meaningless on touch (you can't drag files);
+     restyle as a filled tap target instead. The <label>-for-<input> pattern
+     already opens the native file picker on tap, no JS change needed. */
+  .dropzone-col { gap: 8px; }
+  .dropzone { min-height: auto !important; padding: 22px 18px !important; border-style: solid !important; border-color: var(--cyan) !important; background: #F5FCFE !important; text-align: center; }
+  .dropzone.has-data { background: #F1F8EE !important; border-color: var(--pos-fg) !important; }
+  .dropzone.has-error { border-color: var(--neg-fg) !important; }
+  .dropzone-icon { display: none; }
+  .dropzone-label { font-size: 16px; margin-bottom: 4px; }
+  .dropzone-hint { display: none; }
+  .dropzone-tag { font-size: 9px; }
+}
+
+/* "Open built-in data" manual fallback + cache-clear link — shown under
+   the dropzones for viewers that don't auto-load (e.g. restricted
+   file-preview webviews that don't fire deferred timers). */
+.embedded-controls { margin-top: 24px; display: none; flex-direction: column; align-items: center; gap: 8px; }
+.embedded-hint { font-size: 11px; color: var(--ink-3); max-width: 360px; text-align: center; line-height: 1.4; }
+.cache-controls { margin-top: 18px; display: flex; justify-content: center; }
+.cache-clear-btn { font-family: var(--font-body); font-size: 11px; color: var(--ink-3); background: transparent; border: none; border-bottom: 1px dashed var(--line-2); padding: 2px 4px; cursor: pointer; transition: color 0.12s, border-color 0.12s; }
+.cache-clear-btn:hover { color: var(--pink); border-bottom-color: var(--pink); }
+.cache-clear-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+/* Topbar file-status readout — plugs into the shell's .topbar-meta div.
+   Shows which file(s) are loaded, or "not loaded" for an optional slot. */
+.file-meta-stack { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; text-align: right; line-height: 1.35; }
+.file-meta-row { display: inline-flex; gap: 6px; align-items: baseline; }
+.file-meta-label { color: var(--ink-3); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+.file-meta-name { color: var(--ink-2); font-weight: 500; }
+.file-meta-empty { color: var(--ink-3); font-style: italic; opacity: 0.7; }
+@media (max-width: 640px) {
+  /* Drop the filename readout on phones — still available on desktop and
+     in the file picker itself. */
+  #file-meta { display: none; }
+}
+
+/* Fail-loudly overlay for when a required CDN library doesn't load. */
+.lib-error { position: fixed; inset: 0; background: var(--surface); color: var(--ink); display: flex; align-items: center; justify-content: center; text-align: center; padding: 32px; z-index: 9999; font-family: var(--font-body); }
+.lib-error .inner { max-width: 460px; }
+.lib-error h2 { font-family: var(--font-display); font-size: 20px; color: var(--navy); margin-bottom: 10px; }
+.lib-error p { font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+
+
+/* ==========================================================================
+   SMALL UTILITIES (verbatim, identical in both sources)
+   ========================================================================== */
+/* "‹ Back" link, styled as a bordered text button. */
+.back-link { font-family: var(--font-body); font-size: 18px; color: var(--ink-3); background: transparent; border: 1px solid var(--line); padding: 2px 10px 4px; border-radius: 4px; cursor: pointer; font-weight: 500; line-height: 1; transition: all 0.15s; }
+.back-link:hover { color: var(--navy); border-color: var(--ink-3); background: var(--bg-2); }
+.back-link:focus { outline: 2px solid var(--cyan); outline-offset: 1px; }
+
+/* Tab-style sub-navigation within a page (distinct from the sidenav). */
+.subnav { display: flex; gap: 4px; border-bottom: 2px solid var(--line); margin: 14px 0 22px; flex-wrap: wrap; }
+.subnav button { font-family: var(--font-body); font-size: 12px; padding: 8px 14px; border: none; background: var(--bg-3); cursor: pointer; color: var(--ink-2); border-radius: 4px 4px 0 0; font-weight: 500; margin-bottom: -2px; border-bottom: 2px solid transparent; }
+.subnav button.active { background: var(--pink); color: #FFFFFF; border-bottom-color: var(--pink); }
+
+/* Generic content-grid utilities for laying out cards/panels. */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 1100px) { .grid-3 { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* Compact KPI strip — a row of equal-width stat cells sharing hairline
+   borders, each with a label / value / delta. */
+.scorecard { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.scorecard-item { background: var(--bg); padding: 14px 14px; }
+.scorecard-item .lbl { font-family: var(--font-body); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin-bottom: 4px; font-weight: 500; }
+.scorecard-item .val { font-family: var(--font-display); font-weight: 700; font-size: 20px; color: var(--navy); line-height: 1.1; }
+.scorecard-item .delta { font-family: var(--font-body); font-size: 11px; font-weight: 600; margin-top: 4px; }
+.scorecard-item .delta.pos { color: var(--pos-fg); }
+.scorecard-item .delta.neg { color: var(--neg-fg); }
+.scorecard-item .delta.flat { color: var(--ink-3); }
+
+/* Small label above a chart/panel, in the accent pink. */
+.panel-strap { font-family: var(--font-display); font-weight: 600; font-size: 12px; color: var(--pink); margin: 18px 0 4px; }
+/* Units/caption line under a panel title. */
+.panel-units { font-family: var(--font-body); font-size: 11px; color: var(--ink-3); margin-bottom: 12px; }
+
+/* End-of-page brand strap with a "last updated" line — set the date text
+   yourself per release (it's the single source of truth for that page). */
+.footer-strap { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--line); flex-wrap: wrap; gap: 12px; }
+.footer-strap .left { font-family: var(--font-body); font-size: 11px; color: var(--ink-3); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.footer-strap .right { font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--pink); letter-spacing: 0.06em; text-align: right; margin-left: auto; }
+.footer-strap .right-updated { display: block; margin-top: 4px; font-family: var(--font-body); font-weight: 400; font-size: 10px; color: var(--ink-3); letter-spacing: 0; text-transform: none; }
+
+/* ==========================================================================
+   KEY CHANGES TAB (new, sourced from UK_Brand_Pulse — single-source, not
+   yet cross-checked against a second dashboard)
+   ==========================================================================
+   A two-column summary page: one column of statistically-significant
+   MoM/YoY moves (grouped into Increases/Decreases, each split into whatever
+   metric groupings your dashboard has — funnel/key-attributes/other, in the
+   source), the other of longer-run trends (Upward/Downward, each showing a
+   small inline sparkline via plain SVG <polyline> — no chart library needed
+   for these). Wrap the two columns in the existing .grid-2 utility (see
+   Small Utilities below) — that's all the layout scaffolding needed;
+   everything below is just the content inside each column.
+
+   The JS that decides WHAT counts as "significant" or "trending" is tied to
+   your own significance-testing and windowing logic, so it isn't cataloged
+   here — copy the shape (loop your metrics, bucket each into pos/neg or
+   up/down, render a .kc-row for each) rather than the source's exact
+   thresholds unless your methodology matches it exactly (source uses: a
+   two-proportion z-test at 95% confidence for "significant"; for "trend",
+   a metric must move ≥20% relative over a minimum 6-month window with the
+   same direction sustained across ≥60% of the months in that window).
+   ========================================================================== */
+.kc-columns { align-items: start; margin-top: 8px; }
+.kc-column { min-width: 0; }
+.kc-column-title { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--navy); margin: 0 0 10px; }
+.kc-section { border-radius: 8px; padding: 14px 16px 16px; margin-bottom: 16px; border: 1px solid var(--line); }
+.kc-section.kc-fill-pos { background: rgba(40,150,80,0.07); border-color: rgba(40,150,80,0.18); }
+.kc-section.kc-fill-neg { background: rgba(200,50,70,0.07); border-color: rgba(200,50,70,0.18); }
+.kc-section-title { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.01em; color: var(--ink); margin-bottom: 10px; }
+.kc-section-title.kc-section-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.kc-section-title-note { font-family: var(--font-body); font-weight: 400; font-style: italic; font-size: 11px; color: var(--ink-3); flex: 0 0 84px; text-align: right; white-space: nowrap; }
+.kc-subsection { margin-bottom: 12px; }
+.kc-subsection:last-child { margin-bottom: 0; }
+.kc-subsection-title { font-family: var(--font-display); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); margin-bottom: 6px; }
+.kc-empty { color: var(--ink); font-size: 13px; padding: 4px 2px 2px; }
+.kc-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 5px; background: var(--bg); margin-bottom: 4px; transition: background 0.12s; }
+.kc-row.clickable { cursor: pointer; }
+.kc-row.clickable:hover { background: var(--bg-2); }
+.kc-row.clickable:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.kc-row-label { flex: 1 1 auto; font-size: 12.5px; color: var(--ink); min-width: 0; }
+.kc-row-val { font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--navy); flex-shrink: 0; }
+.kc-row-diff { font-family: var(--font-body); font-weight: 600; font-size: 12px; flex-shrink: 0; min-width: 74px; text-align: right; }
+.kc-row-diff.pos { color: var(--pos-fg); }
+.kc-row-diff.neg { color: var(--neg-fg); }
+.kc-row-spark { flex-shrink: 0; width: 84px; height: 26px; }
+.kc-spark { width: 100%; height: 100%; display: block; }
+/* .kc-row-diff rows (the significant-change column) render a plain text delta
+   like "-5.1pp YoY"; .kc-row-spark rows (the trend column) render the inline
+   SVG sparkline instead — a given .kc-row uses one or the other, not both. */
+
+
+/* ==========================================================================
+   AI DATA ASSISTANT — panel shell (new, sourced from UK_Brand_Pulse —
+   single-source; CSS ONLY)
+   ==========================================================================
+   This is the floating launcher button + slide-up chat panel shell for an
+   in-browser "ask the dashboard a question" assistant. It's CSS-only by
+   design, same as everything else in this file — the HTML markup for the
+   panel and its full JS engine (intent matching, natural-language brand/
+   metric lookup, diagnostics logging) are substantial enough that they live
+   instead in widget-scripts.js under "AI DATA ASSISTANT — full widget",
+   alongside notes on what's safely reusable verbatim vs. what needs
+   rewriting for your dashboard's own metric/brand vocabulary.
+
+   The launcher only appears once the dashboard is visible: the source gates
+   it on `body:has(#dashboard.visible) .assistant-launcher` — adjust that
+   selector if your boilerplate's "loaded" state uses a different hook.
+   ========================================================================== */
+.assistant-launcher{position:fixed;right:22px;bottom:22px;z-index:95;display:none;align-items:center;gap:9px;background:var(--navy);color:#fff;border:none;border-radius:999px;padding:12px 18px 12px 15px;cursor:pointer;font-family:var(--font-display);font-weight:600;font-size:13.5px;box-shadow:0 8px 24px rgba(15,31,74,.28);transition:transform .15s,box-shadow .15s;}
+body:has(#dashboard.visible) .assistant-launcher{display:flex;}
+.assistant-launcher:hover{transform:translateY(-1px);box-shadow:0 12px 30px rgba(15,31,74,.34);}
+.assistant-launcher svg{width:18px;height:18px;}
+.assistant-panel{position:fixed;right:22px;bottom:22px;z-index:96;width:384px;max-width:calc(100vw - 44px);height:566px;max-height:calc(100vh - 96px);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 64px rgba(15,31,74,.28);display:flex;flex-direction:column;overflow:hidden;opacity:0;transform:translateY(8px) scale(.98);pointer-events:none;transition:opacity .18s,transform .18s;}
+.assistant-panel.open{opacity:1;transform:none;pointer-events:auto;}
+.a-head{display:flex;align-items:center;gap:10px;padding:13px 14px;background:var(--navy);color:#fff;}
+.a-head .a-title{font-family:var(--font-display);font-weight:600;font-size:14px;line-height:1.2;}
+.a-head .a-sub{font-size:10.5px;color:rgba(255,255,255,.72);font-weight:400;margin-top:1px;}
+.a-head button{background:transparent;border:none;color:rgba(255,255,255,.85);cursor:pointer;padding:5px;border-radius:5px;display:flex;}
+.a-head button:hover{background:rgba(255,255,255,.15);color:#fff;}
+.a-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:11px;background:var(--bg-2);}
+.a-msg{max-width:90%;font-size:13px;line-height:1.5;border-radius:12px;padding:9px 12px;word-wrap:break-word;}
+.a-msg.user{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:4px;}
+.a-msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--line);color:var(--ink);border-bottom-left-radius:4px;}
+.a-msg.bot strong{color:var(--navy);font-weight:600;}
+.a-fig{font-family:var(--font-display);font-weight:700;font-size:21px;color:var(--navy);letter-spacing:-.01em;display:block;margin:2px 0 1px;}
+.a-note{font-size:10.5px;color:var(--ink-3);margin-top:7px;line-height:1.35;}
+.a-up{color:#0a7f3f;font-weight:700;}.a-dn{color:#c0392b;font-weight:700;}.a-flat{color:var(--ink-3);font-weight:700;}
+.a-spark{display:flex;align-items:flex-end;gap:3px;height:46px;margin:9px 0 3px;}
+.a-spark .bar{flex:1;background:var(--navy-2);border-radius:2px 2px 0 0;min-height:2px;opacity:.8;}
+.a-spark .bar.last{background:var(--pink);opacity:1;}
+.a-sparklab{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-3);}
+.a-table{width:100%;border-collapse:collapse;margin:7px 0 2px;font-size:12.5px;}
+.a-table td{padding:4px 2px;border-bottom:1px solid var(--line);}
+.a-table td.v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;color:var(--navy);white-space:nowrap;}
+.a-table td.d{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:8px;}
+.a-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;}
+.a-chip{font-size:11.5px;font-family:var(--font-body);background:#fff;border:1px solid var(--line-2);color:var(--ink-2);border-radius:999px;padding:5px 11px;cursor:pointer;text-align:left;}
+.a-chip:hover{border-color:var(--navy);color:var(--navy);}
+.a-foot{border-top:1px solid var(--line);padding:10px;display:flex;gap:8px;background:#fff;}
+.a-foot input{flex:1;border:1px solid var(--line-2);border-radius:9px;padding:9px 11px;font-family:var(--font-body);font-size:13px;color:var(--ink);outline:none;}
+.a-foot input:focus{border-color:var(--navy);}
+.a-foot button{background:var(--navy);border:none;color:#fff;border-radius:9px;padding:0 13px;cursor:pointer;display:flex;align-items:center;}
+.a-foot button:hover{background:var(--navy-2);}
+.a-foot button svg{width:17px;height:17px;}
+@media (max-width:480px){.assistant-panel{right:10px;left:10px;bottom:10px;width:auto;height:72vh;}}
+
+/* ==========================================================================
+   VERTICAL / SEGMENT FILTER  (new, sourced from 202607_Product_Pulse —
+   single-source; zero new CSS)
+   ==========================================================================
+   Product Pulse cuts its whole dashboard by vertical with nothing more
+   than a plain <select> — already styled by the base `select { ... }`
+   rule in design-tokens.css, so there is no new class here. The pattern
+   worth copying is the JS, not the markup:
+
+     <label class="select-label" for="f-vert">Vertical</label>
+     <select id="f-vert">
+       <option value="total">Total</option>
+       <option value="sports">Sports</option>
+       <option value="gaming">Gaming</option>
+     </select>
+
+   Wired with nothing more than:
+     var vs = document.getElementById('f-vert');
+     vs.onchange = function () { state.vert = vs.value; renderActive(); };
+
+   i.e. one state variable, one re-render call. Whatever function already
+   reads your dashboard's filtered data (however that's shaped) just needs
+   to take state.vert as one more parameter alongside brand/period. Relabel
+   the options for your own verticals — "Sports/Casino/Bingo",
+   "Retail/Online", whatever the report needs.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   BRAND-SPLIT (multi-brand overlay picker)  (verbatim, single-source —
+   202607_Product_Pulse)
+   ==========================================================================
+   A brand-badge variant for "which brands are overlaid on this chart right
+   now" — different from the plain .brand-pill-group filter above, which is
+   single-select. Each pill shows the brand's own colour at full opacity
+   when included, faded when excluded, and carries its own +/− button so
+   brands can be added or removed without reopening a picker menu. When
+   exactly one brand remains selected, the +/− button hides (nothing left
+   to remove) and the pill's padding absorbs the freed space — that's the
+   .solo state below.
+
+   Pairs with the "Brand-split overlay chart" JS in widget-scripts.js —
+   the pill click handlers there push/splice a brand into a state array,
+   the chart-build function reads that same array to decide which line
+   series to draw.
+   ========================================================================== */
+.brand-split { display: inline-flex; align-items: stretch; padding: 0; min-width: 0; overflow: hidden; opacity: 0.45; transition: opacity 0.12s; }
+.brand-split.active { opacity: 1; }
+.brand-split:not(.active):hover { opacity: 0.8; }
+.brand-split .bs-main, .brand-split .bs-add { border: 0; background: transparent; color: inherit; font-family: var(--font-display); font-weight: 700; font-size: 14px; cursor: pointer; }
+.brand-split .bs-main { padding: 6px 7px 6px 12px; }
+.brand-split.solo .bs-main { padding: 6px 12px; }
+.brand-split .bs-add { padding: 6px 10px 6px 7px; line-height: 1; background: rgba(255,255,255,0.16); border-left: 1px solid rgba(255,255,255,0.3); }
+.brand-split .bs-add:hover { background: rgba(255,255,255,0.32); }
+.brand-split .bs-main:focus-visible, .brand-split .bs-add:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+
+
+/* ==========================================================================
+   DATA DICTIONARY PAGE  (verbatim, single-source — 202607_Product_Pulse)
+   ==========================================================================
+   This is Product Pulse's own, fuller Definitions page — a different,
+   plainer-header table style than Commercial Pulse's `.def-table` earlier
+   in this file (navy thead). Deliberately namespaced `.dd-*` rather than
+   reusing `.def-table`, because the two source dashboards built visually
+   different tables under a name that would otherwise collide if both are
+   catalogued here — pick whichever matches the look you want, not both on
+   the same table.
+
+   Structure: one `.dd-lead` intro paragraph, then a `.dd-block` per
+   section (a metric group, a glossary of comparison-reference terms, a
+   raw-feed-field appendix), each wrapped `.dd-table-wrap > table.dd-table`.
+   `.dd-tag` is a small pill for inline labels like "MoM" inside a
+   definition; `.dd-tag.nsm` is the pink "North Star Metric" variant.
+   `.mono` is for raw field names quoted verbatim from a feed.
+
+   REUSE TIERS — same idea as the AI assistant:
+   1. VERBATIM REUSABLE: every CSS rule below, and the overall page shape
+      (lead → blocks → tables).
+   2. ADAPT THE SHAPE, REWRITE THE CONTENT: the source's renderDefinitions()
+      JS (not reproduced here — it's ~200 lines deeply tied to this
+      report's exact metric taxonomy) builds its tables from a handful of
+      JS objects: metric name → plain-English definition, metric name →
+      source system ("GA4" / "Commercial Pulse" / "Calculated field"), raw
+      feed field → definition. Write your own version of those objects for
+      your dashboard's actual metrics and feeds, then loop over them the
+      same way: one <tr> per metric, columns for name/definition/source/
+      dimensions as relevant. That loop-over-a-lookup-table shape is the
+      reusable part; the lookup tables themselves are 100% yours.
+   ========================================================================== */
+.dd-lead { font-family: var(--font-body); font-size: 14px; line-height: 1.6; color: var(--ink-2); max-width: 900px; margin: 4px 0 22px; }
+.dd-lead strong { color: var(--navy); font-weight: 600; }
+.dd-block { margin: 0 0 26px; }
+.dd-block h3 { font-family: var(--font-display); font-size: 15px; font-weight: 700; color: var(--navy); letter-spacing: -0.01em; margin: 0 0 10px; padding-bottom: 7px; border-bottom: 1px solid var(--line); }
+.dd-block h4.dd-pyr { font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--ink); margin: 18px 0 8px; padding-left: 9px; border-left: 3px solid var(--accent, var(--cyan)); }
+.dd-pyr-blurb { font-family: var(--font-body); font-size: 12px; font-weight: 400; color: var(--ink-3); margin-left: 6px; }
+.dd-table { width: 100%; border-collapse: collapse; font-family: var(--font-body); font-size: 12.5px; margin: 0 0 4px; }
+.dd-table th { text-align: left; font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); padding: 7px 12px; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+.dd-table td { padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--ink-2); vertical-align: top; line-height: 1.45; }
+.dd-table tbody tr:last-child td { border-bottom: none; }
+.dd-table tbody tr:hover { background: var(--bg-2); }
+.dd-table td strong { color: var(--ink); font-weight: 600; }
+.dd-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.dd-mut { color: var(--ink-3); font-weight: 400; }
+.mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 11px; color: var(--ink-3); }
+.dd-tag { display: inline-block; font-family: var(--font-body); font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 10px; background: var(--bg-2); border: 1px solid var(--line-2); color: var(--ink-2); }
+.dd-tag.nsm { background: rgba(238,58,124,0.10); border-color: rgba(238,58,124,0.30); color: var(--pink); }
+.dd-inline { font-family: var(--font-body); font-size: 13px; color: var(--ink-2); margin: 0; }
+.dd-note { font-family: var(--font-body); font-size: 12px; color: var(--ink-3); line-height: 1.55; margin: 8px 0 0; max-width: 900px; }
+.dd-list { font-family: var(--font-body); font-size: 13px; line-height: 1.6; color: var(--ink-2); margin: 4px 0 0; padding-left: 18px; max-width: 900px; }
+.dd-list li { margin-bottom: 8px; }
+.dd-list strong { color: var(--navy); font-weight: 600; }
